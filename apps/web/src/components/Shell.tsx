@@ -12,6 +12,7 @@ const NAV = [
   { href: "/market", label: "Market & gaps" },
   { href: "/plan", label: "Weekly plan" },
   { href: "/practice", label: "Practice" },
+  { href: "/report", label: "Weekly report" },
   { href: "/jobs", label: "Jobs" },
   { href: "/applications", label: "Applications" },
   { href: "/resume", label: "Resume" },

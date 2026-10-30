@@ -10,6 +10,7 @@ import { errorHandler, HttpError } from "./http.js";
 import { llmEnabled } from "./llm.js";
 import { agentsRouter } from "./routes/agents.js";
 import { coreRouter } from "./routes/core.js";
+import { insightsRouter } from "./routes/insights.js";
 
 export function createApp() {
   const app = express();
@@ -29,6 +30,7 @@ export function createApp() {
   api.use(requireUser);
   api.use(coreRouter);
   api.use(agentsRouter);
+  api.use(insightsRouter);
   app.use("/api", api);
 
   app.use((_req, _res, next) => next(new HttpError(404, "route not found")));

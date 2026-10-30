@@ -96,6 +96,12 @@ export default function JobPage() {
             })}>
               {busy === "tailor" ? "Tailoring…" : "Tailor my resume"}
             </button>
+            <button className="btn btn-quiet" disabled={!!busy} onClick={() => act("interview", async () => {
+              const s = await api<{ id: string }>("/api/interviews", { method: "POST", json: { jobId: id, count: 5 } });
+              router.push(`/practice/interview/${s.id}`);
+            })}>
+              {busy === "interview" ? "Writing questions…" : "Practice interview"}
+            </button>
             <button className="btn btn-quiet" disabled={!!busy} onClick={() => act("track", async () => {
               await api("/api/applications", { method: "POST", json: { jobId: id } });
               router.push("/applications");

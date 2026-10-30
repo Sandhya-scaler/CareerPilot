@@ -7,7 +7,7 @@ import { ProofLadder } from "@/components/ProofLadder";
 import { ResumeUpload } from "@/components/ResumeUpload";
 import { Empty, ErrorNote, Loading, PageHeader, Quote, Section } from "@/components/ui";
 import { api, errorText, relDate, useApi } from "@/lib/api";
-import type { Evidence } from "@/lib/types";
+import type { Evidence, Tier } from "@/lib/types";
 
 interface ResumeRow {
   id: string;
@@ -19,6 +19,55 @@ interface Version {
   id: string;
   label: string;
   evidence: Evidence[];
+}
+
+function GithubImport() {
+  const repos = useApi<{ id: string; context: string; text: string; tier: Tier; skills: string[]; links: string[] }[]>("/api/github/evidence");
+  const [username, setUsername] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const run = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await api<{ repos: number; evidence: number; skills: string[] }>("/api/github/import", { method: "POST", json: { username } });
+      setMsg(`Read ${r.repos} repositories: ${r.skills.length} skills now backed by public code.`);
+      await repos.reload();
+    } catch (x) {
+      setError(errorText(x));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Section title="Proof from GitHub">
+      <p className="mb-3 max-w-2xl text-ink-soft">
+        Languages GitHub measures in your public repos count as <strong className="font-medium text-ink">verified</strong>; tools named in a
+        repo&apos;s README count as demonstrated, with the repo as the link.
+      </p>
+      <form onSubmit={run} className="flex max-w-md gap-2">
+        <input className="field" placeholder="GitHub username" aria-label="GitHub username" value={username} onChange={(e) => setUsername(e.target.value)} />
+        <button className="btn shrink-0" disabled={busy || !username.trim()}>{busy ? "Reading repos…" : "Import"}</button>
+      </form>
+      {msg && <p className="mt-2 text-sm text-proof-4">{msg}</p>}
+      {error && <div className="mt-2"><ErrorNote>{error}</ErrorNote></div>}
+      {(repos.data ?? []).length > 0 && (
+        <ul className="mt-4 divide-y divide-rule border-y border-rule">
+          {repos.data!.map((r) => (
+            <li key={r.id} className="grid gap-x-4 gap-y-1 py-2.5 sm:grid-cols-[auto_1fr]">
+              <span className="pt-1"><ProofLadder tier={r.tier} size="sm" /></span>
+              <div>
+                <a href={r.links[0]} target="_blank" rel="noreferrer" className="source text-action hover:underline">{r.text}</a>
+                <p className="text-[13px] text-ink-faint">{r.skills.join(", ")}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Section>
+  );
 }
 
 export default function ResumePage() {
@@ -97,6 +146,8 @@ export default function ResumePage() {
               )}
             </Section>
           )}
+
+          <GithubImport />
 
           <Section title="Versions">
             <ul className="divide-y divide-rule border-y border-rule">

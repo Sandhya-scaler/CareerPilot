@@ -5,6 +5,7 @@ import { EXTRACTOR_VERSION, extractRequirements, guessTitle } from "../extract/j
 import { cleanText } from "../extract/text.js";
 import { notFound } from "../http.js";
 import { skillId } from "../skills/repo.js";
+import { refreshGhostRisk } from "./ghost.js";
 import type { RequirementDraft } from "../types.js";
 
 export interface JobInput {
@@ -67,6 +68,7 @@ export async function upsertJob(input: JobInput): Promise<{ id: string; created:
     }
     return jobId;
   });
+  await refreshGhostRisk([id]);
   return { id, created: !existing };
 }
 

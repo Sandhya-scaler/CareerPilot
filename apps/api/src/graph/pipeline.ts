@@ -116,7 +116,18 @@ async function coach(s: typeof PrepareState.State, config: LangGraphRunnableConf
 }
 
 let compiled: ReturnType<typeof build> | null = null;
+let checkpointer: PostgresSaver | null = null;
 let ready: Promise<void> | null = null;
+
+/** Shared Postgres checkpointer for every graph (tables created once). */
+export async function getCheckpointer(): Promise<PostgresSaver> {
+  if (!checkpointer) {
+    checkpointer = new PostgresSaver(pool);
+    ready = checkpointer.setup();
+  }
+  await ready;
+  return checkpointer;
+}
 
 function build(checkpointer: PostgresSaver) {
   return new StateGraph(PrepareState)
@@ -136,11 +147,6 @@ function build(checkpointer: PostgresSaver) {
 
 /** Compiled graph with a Postgres checkpointer (tables created on first use). */
 export async function prepareGraph() {
-  if (!compiled) {
-    const checkpointer = new PostgresSaver(pool);
-    ready = checkpointer.setup();
-    compiled = build(checkpointer);
-  }
-  await ready;
+  compiled ??= build(await getCheckpointer());
   return compiled;
 }
