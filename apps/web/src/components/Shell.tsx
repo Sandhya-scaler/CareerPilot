@@ -77,7 +77,10 @@ export function Shell({ children }: { children: ReactNode }) {
             </ul>
             <div className="mt-6 border-t border-rule px-3 pt-4 text-sm text-ink-faint">
               <p className="truncate" title={me.email}>{me.name ?? me.email}</p>
-              <button onClick={logout} className="mt-1 text-action hover:underline">Sign out</button>
+              <p className="mt-1 flex gap-3">
+                <Link href="/account" className="text-action hover:underline">Account</Link>
+                <button onClick={logout} className="text-action hover:underline">Sign out</button>
+              </p>
             </div>
           </nav>
         </aside>

@@ -181,6 +181,7 @@ export async function generateQuestions(ctx: QuestionContext, max = 15): Promise
     "questions",
     async () => {
       const out = await structured({
+        label: "questions",
         tier: "reasoning",
         system: Q_SYSTEM,
         input: JSON.stringify({

@@ -7,6 +7,7 @@ export default defineConfig({
       EMBEDDINGS: "off",
       ANTHROPIC_API_KEY: "",
       SESSION_SECRET: "test-secret-test-secret-test-secret",
+      DISABLE_RATE_LIMIT: "1",
     },
     fileParallelism: false,
     testTimeout: 30_000,

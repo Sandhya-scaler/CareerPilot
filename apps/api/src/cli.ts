@@ -15,7 +15,8 @@ import { TIER_LABEL } from "./types.js";
 
 const [cmd, a, b] = process.argv.slice(2);
 
-const load = async (p: string) => fileToText(await readFile(p), path.basename(p));
+// `npm run cli -w apps/api` runs from apps/api; resolve paths against where the user typed the command.
+const load = async (p: string) => fileToText(await readFile(path.resolve(process.env.INIT_CWD ?? process.cwd(), p)), path.basename(p));
 const pad = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s.padEnd(n));
 const bar = (x: number) => "█".repeat(Math.round(x * 10)).padEnd(10, "·");
 

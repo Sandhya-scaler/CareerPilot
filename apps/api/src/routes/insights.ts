@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { userId } from "../auth.js";
 import { parse, Uuid } from "../http.js";
+import { rateLimit } from "../ratelimit.js";
 import { checkLiveness } from "../services/ghost.js";
 import { githubEvidence, importGithub } from "../services/github.js";
 import { answerInterview, getInterview, interviewAttempts, listInterviews, startInterview } from "../services/interviews.js";
@@ -25,7 +26,7 @@ insightsRouter.get("/interviews/:id", async (req, res) => {
   res.json({ ...(await getInterview(userId(req), id)), attempts: await interviewAttempts(userId(req), id) });
 });
 
-insightsRouter.post("/interviews/:id/answer", async (req, res) => {
+insightsRouter.post("/interviews/:id/answer", rateLimit({ name: "answer", windowMs: 3600_000, max: 120 }), async (req, res) => {
   const body = parse(z.object({ answer: z.string().trim().min(1, "write or say an answer first").max(8000) }), req.body);
   res.json(await answerInterview(userId(req), parse(Uuid, req.params.id), body.answer));
 });
@@ -44,7 +45,7 @@ insightsRouter.get("/reports/weekly", async (req, res) => {
 
 // ---- GitHub ---------------------------------------------------------------------------------------
 
-insightsRouter.post("/github/import", async (req, res) => {
+insightsRouter.post("/github/import", rateLimit({ name: "github", windowMs: 3600_000, max: 6 }), async (req, res) => {
   const body = parse(z.object({ username: z.string().regex(/^[a-z\d](?:[a-z\d-]{0,38})$/i, "not a valid GitHub username") }), req.body);
   res.json(await importGithub(userId(req), body.username));
 });

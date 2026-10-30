@@ -100,6 +100,9 @@ export default function LoginPage() {
           <Suspense>
             <LoginForm />
           </Suspense>
+          <p className="mt-6 text-[13px] text-ink-faint">
+            <a href="/privacy" className="hover:underline">How we handle your data</a>
+          </p>
         </div>
       </div>
 

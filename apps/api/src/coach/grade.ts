@@ -60,6 +60,7 @@ export async function gradeAnswer(prompt: string, rubric: string[], answer: stri
     "grading",
     async () => {
       const g = await structured({
+        label: "grading",
         tier: "reasoning",
         system: GRADE_SYSTEM,
         input: JSON.stringify({ question: prompt, rubric, answer }),

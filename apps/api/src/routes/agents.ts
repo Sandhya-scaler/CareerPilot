@@ -3,6 +3,7 @@ import { z } from "zod";
 import { userId } from "../auth.js";
 import { one } from "../db/pool.js";
 import { parse, Uuid } from "../http.js";
+import { rateLimit } from "../ratelimit.js";
 import { getMarketMap, latestMarketMap, listMarketMaps } from "../services/market.js";
 import { activePlan, createPlanFromMarket, getPlan, listQuestions, updateTask } from "../services/plans.js";
 import { researchJobs } from "../services/research.js";
@@ -28,7 +29,7 @@ const Prepare = z.object({
 });
 
 /** Golden path: research → resume check (HITL) → market map → plan + questions. Async; poll or stream the run. */
-agentsRouter.post("/careers/prepare", async (req, res) => {
+agentsRouter.post("/careers/prepare", rateLimit({ name: "prepare", windowMs: 3600_000, max: 12 }), async (req, res) => {
   const body = parse(Prepare, req.body);
   const uid = userId(req);
   const user = await one<{ hours_per_week: number }>("SELECT hours_per_week FROM users WHERE id = $1", [uid]);
@@ -91,7 +92,7 @@ agentsRouter.post("/runs/:id/resume", async (req, res) => {
 });
 
 /** Research only (no plan): find and store relevant JDs for a role. */
-agentsRouter.post("/jobs/search", async (req, res) => {
+agentsRouter.post("/jobs/search", rateLimit({ name: "search", windowMs: 3600_000, max: 30 }), async (req, res) => {
   const body = parse(Prepare.pick({ role: true, location: true, limit: true, companies: true }).extend({ onlyCompanies: z.boolean().default(false) }), req.body);
   const r = await researchJobs({ userId: userId(req), role: body.role, location: body.location ?? null, limit: body.limit, companies: body.companies, onlyCompanies: body.onlyCompanies });
   res.json(r);

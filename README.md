@@ -1,37 +1,52 @@
-# CareerPilot — AI Job Application Agent
+# CareerPilot
 
-> Turn "I want role X" into an evidence-backed plan: what the market asks for, what you've actually proven, the shortest path to close the gap, and a tracker that keeps you moving.
+> Turn "I want role X" into an evidence-backed plan: what employers ask for, what you've actually proven, the shortest path between the two, and a tracker that keeps you moving.
 
-**Status:** planning complete, implementation not started (2026-10-30).
+CareerPilot reads current job descriptions for a role and checks every requirement against what your resume actually shows. Each match links a JD sentence to a resume line. The gaps become a weekly plan that fits your hours. **It never invents experience.** Tailored resumes only reorder by default. Any AI rewording has to pass a grounding check: no new skills, numbers or claims.
 
-## Why this matters
-- 41–48% of job seekers say **tailoring a resume per job** is the hardest part.
-- 77% fear an **ATS filter** silently rejects them, and 60% say not knowing whether a human ever saw their resume is the worst part.
-- 67% have run into **ghost jobs**.
-- Existing tools either *write* (and invent experience) or *list* jobs. Few of them **reason over evidence**.
+## What it does
+- **Market map:** reads 10–50 current postings for your role (public company job-board APIs, or JDs you paste from anywhere) and shows what's asked for, how often, and how often it's a must-have.
+- **Evidence-linked matching:** every requirement sits next to your strongest proof, graded on a 4-step *proof ladder*: claimed → applied → demonstrated → verified.
+- **Weekly plan:** gaps ranked by demand × gap × learnability and scheduled into your hours. Finishing a build task with proof (a link or a result) adds evidence and raises your readiness.
+- **Practice:** questions from your gaps, from real JD sentences and from your own projects, each with a rubric. Mock interviews ask follow-ups on weak answers and add practice tasks to your plan.
+- **Applications:** a kanban tracker with follow-up reminders and drafts, plus a ghost-job flag for postings that vanished from the company board or look stale.
+- **Resume versions:** tailored per job, with a line diff, a "why each change" log and print-to-PDF.
+- **GitHub import:** languages GitHub measures in your public repos count as verified evidence.
+- **Weekly report:** what you did, new evidence, readiness change, what's next.
 
-CareerPilot's wedge: **evidence-linked skill matching**. Every "you have X" points to a resume line, and every "you lack X" points to the JD sentences asking for it. The tool never fabricates.
+Everything works **without an API key** (rules, a curated question bank, keyword grading). Add `ANTHROPIC_API_KEY` for Claude-powered extraction, plans, questions, rewording and grading.
 
-## The plan
-| Doc | What's inside |
+## Quick start
+```bash
+brew install postgresql@17 pgvector && brew services start postgresql@17
+createdb careerpilot && createdb careerpilot_test
+cp .env.example .env            # set SESSION_SECRET (openssl rand -hex 32)
+npm install
+npm run seed
+npm run dev:api                 # :4000
+npm run dev:web                 # :3000 → create an account → "Prepare for a role"
+```
+No database handy? Try the offline CLI: `npm run cli -w apps/api -- match path/to/resume.pdf path/to/jd.txt`.
+
+## Quality
+| Check | Result |
 |---|---|
-| [01-research](docs/01-research.md) | User pain points (with sources), competitors, **legal job data sources** (incl. India), skill taxonomies, tech facts |
-| [02-product-spec](docs/02-product-spec.md) | Principles, personas, golden path, P0/P1/P2 features, **evidence tiers**, worked CV-internship example, success metrics |
-| [03-architecture](docs/03-architecture.md) | Stack, LangGraph agent graph, scoring formulas, Postgres schema, API, repo layout |
-| [04-roadmap](docs/04-roadmap.md) | 5 phases with demoable milestones, risks, "definition of solid" |
-| [05-evaluation](docs/05-evaluation.md) | Gold dataset, per-agent metrics and targets, grounding check |
+| JD requirement extraction (8 hand-labeled JDs, rules only) | precision 96.5%, recall 100%, must/nice 96.3% |
+| Resume evidence (4 hand-labeled resumes, rules only) | precision 98.8%, recall 100%, tier exact 97.5% |
+| API tests | 81 passing: extraction, scoring, grounding, HITL pipeline, interviews, isolation between users, LLM guards with a mocked model that fabricates |
+| End to end | `npm run e2e` drives the golden path in Chrome as a new user |
 
-## Agents
-| Agent | Job |
+These are small, synthetic eval sets. Grow them with real (consented) resumes before trusting the numbers broadly.
+
+## Docs
+| | |
 |---|---|
-| Job Research | Fetch JDs from permitted APIs (Greenhouse/Lever/Ashby/Adzuna) and pasted JDs; dedupe; extract requirements; flag ghost jobs |
-| Resume | Parse resume → evidence items with tiers; user confirms (human-in-the-loop) |
-| Matching | Deterministic, evidence-linked scoring per requirement and across the market |
-| Coach | Weekly prep plan, practice questions, mock interviews, grounded resume tailoring |
-| Tracker/Report | Applications, follow-ups, weekly progress report |
+| [01 research](docs/01-research.md) | User pain points, competitors, legal job data sources (incl. India), taxonomies |
+| [02 product spec](docs/02-product-spec.md) | Principles, personas, features, evidence tiers, worked example |
+| [03 architecture](docs/03-architecture.md) | Stack, agents → code, scoring, data model, API |
+| [04 roadmap & status](docs/04-roadmap.md) | What's done, what's partial, what's next |
+| [05 evaluation](docs/05-evaluation.md) | Metrics, targets, grounding check |
+| [06 operations](docs/06-operations.md) | Setup, config, Docker, deploy, costs |
 
 ## Stack
-FastAPI · LangGraph 1.0 (PostgresSaver) · Claude · PostgreSQL 16 + pgvector · bge-small embeddings · Next.js (later)
-
-## Next step
-Start **Phase 0 → Phase 1** in [04-roadmap](docs/04-roadmap.md). Phase 1's gate: the match report must be accurate on the labeled eval set before any agents get built.
+Express 5 · Next.js 16 · Tailwind 4 · LangGraph.js (Postgres checkpoints, human-in-the-loop interrupts) · Claude (Opus for reasoning, Haiku for extraction) · PostgreSQL 17 + pgvector · local bge-small embeddings · Vitest · Playwright-core

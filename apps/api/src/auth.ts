@@ -3,8 +3,10 @@ import { promisify } from "node:util";
 import { Router, type NextFunction, type Request, type Response } from "express";
 import { z } from "zod";
 import { config, isProd } from "./config.js";
+import { requestContext } from "./context.js";
 import { one, query } from "./db/pool.js";
 import { HttpError, parse } from "./http.js";
+import { rateLimit } from "./ratelimit.js";
 
 const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number) => Promise<Buffer>;
 const COOKIE = "cp_session";
@@ -56,7 +58,7 @@ export function requireUser(req: Request, _res: Response, next: NextFunction) {
   const userId = readSession(req.cookies?.[COOKIE] ?? bearer);
   if (!userId) return next(new HttpError(401, "not signed in"));
   req.userId = userId;
-  next();
+  requestContext.run({ userId }, () => next());
 }
 
 export const userId = (req: Request) => {
@@ -76,7 +78,7 @@ const Credentials = z.object({
 
 export const authRouter = Router();
 
-authRouter.post("/register", async (req, res) => {
+authRouter.post("/register", rateLimit({ name: "register", windowMs: 3600_000, max: 10 }), async (req, res) => {
   const { email, password, name } = parse(Credentials, req.body);
   const exists = await one("SELECT 1 FROM users WHERE email = $1", [email]);
   if (exists) throw new HttpError(409, "an account with this email already exists");
@@ -89,7 +91,7 @@ authRouter.post("/register", async (req, res) => {
   res.status(201).json({ id: user!.id, email, name: name ?? null, token });
 });
 
-authRouter.post("/login", async (req, res) => {
+authRouter.post("/login", rateLimit({ name: "login", windowMs: 15 * 60_000, max: 20 }), async (req, res) => {
   const { email, password } = parse(Credentials.omit({ name: true }), req.body);
   const user = await one<{ id: string; name: string | null; password_hash: string | null }>(
     "SELECT id, name, password_hash FROM users WHERE email = $1",
@@ -136,6 +138,37 @@ authRouter.patch("/me", requireUser, async (req, res) => {
     [userId(req), "name" in p, p.name ?? null, "target_role" in p, p.target_role ?? null, "location" in p, p.location ?? null, p.hours_per_week ?? null],
   );
   res.json(user);
+});
+
+/** Everything we store about the user, as JSON (data portability). */
+authRouter.get("/me/export", requireUser, async (req, res) => {
+  const uid = userId(req);
+  const tables: Record<string, string> = {
+    profile: "SELECT id, email, name, target_role, location, hours_per_week, github_username, created_at FROM users WHERE id = $1",
+    resumes: "SELECT r.title, v.label, v.raw_text, v.change_log, v.created_at FROM resumes r JOIN resume_versions v ON v.resume_id = r.id WHERE r.user_id = $1",
+    evidence: "SELECT source, section, context, text, tier, links, confirmed, created_at FROM evidence_items WHERE user_id = $1",
+    saved_jobs: "SELECT j.title, j.company, j.url, uj.added_at FROM user_jobs uj JOIN jobs j ON j.id = uj.job_id WHERE uj.user_id = $1",
+    applications: "SELECT j.title, j.company, a.status, a.applied_at, a.notes FROM applications a JOIN jobs j ON j.id = a.job_id WHERE a.user_id = $1",
+    plans: "SELECT p.role, t.week, t.title, t.status, t.proof FROM plans p JOIN plan_tasks t ON t.plan_id = p.id WHERE p.user_id = $1",
+    interview_answers: "SELECT prompt, answer, score, feedback, created_at FROM attempts WHERE user_id = $1",
+    weekly_reports: "SELECT week_start, content FROM weekly_reports WHERE user_id = $1",
+  };
+  const out: Record<string, unknown> = { exported_at: new Date().toISOString() };
+  for (const [k, sql] of Object.entries(tables)) out[k] = await query(sql, [uid]);
+  res.setHeader("Content-Disposition", 'attachment; filename="careerpilot-export.json"');
+  res.json(out);
+});
+
+/** LLM usage and cost for this user, by week. */
+authRouter.get("/me/usage", requireUser, async (req, res) => {
+  res.json(
+    await query(
+      `SELECT date_trunc('week', at)::date AS week, label, count(*)::int AS calls,
+              sum(input_tokens)::int AS input_tokens, sum(output_tokens)::int AS output_tokens, round(sum(cost_usd), 4)::float AS cost_usd
+       FROM llm_usage WHERE user_id = $1 GROUP BY 1, 2 ORDER BY 1 DESC, 2`,
+      [userId(req)],
+    ),
+  );
 });
 
 /** Permanently deletes the account and all of its data (cascades). */

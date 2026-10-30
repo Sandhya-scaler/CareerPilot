@@ -10,3 +10,4 @@ apps/api/.cache/
 evals/results/
 apps/web/next-env.d.ts
 *.tsbuildinfo
+e2e-failure.png

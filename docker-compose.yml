@@ -1,0 +1,36 @@
+# Local full stack: docker compose up --build   (then open http://localhost:3000)
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: careerpilot
+      POSTGRES_PASSWORD: careerpilot
+      POSTGRES_DB: careerpilot
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U careerpilot"]
+      interval: 3s
+      retries: 20
+
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    depends_on: { db: { condition: service_healthy } }
+    environment:
+      DATABASE_URL: postgres://careerpilot:careerpilot@db:5432/careerpilot
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET (32+ random chars) in your shell or .env}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ADZUNA_APP_ID: ${ADZUNA_APP_ID:-}
+      ADZUNA_APP_KEY: ${ADZUNA_APP_KEY:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      WEB_ORIGIN: http://localhost:3000
+    volumes: [models:/app/apps/api/.cache]
+    ports: ["4000:4000"]
+
+  web:
+    build: { context: ., dockerfile: apps/web/Dockerfile, args: { API_URL: "http://api:4000" } }
+    depends_on: [api]
+    ports: ["3000:3000"]
+
+volumes:
+  pgdata:
+  models:

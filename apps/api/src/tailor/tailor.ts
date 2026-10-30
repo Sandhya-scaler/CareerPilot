@@ -142,6 +142,7 @@ export async function rephraseForJob(
   const { value, usedLlm } = await withFallback(
     "rephrase",
     () => structured({
+        label: "rephrase",
       tier: "reasoning",
       system: REPHRASE_SYSTEM,
       input: JSON.stringify({

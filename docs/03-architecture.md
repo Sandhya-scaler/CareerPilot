@@ -1,187 +1,98 @@
-# 03 — Architecture
+# 03 — Architecture (as built)
+
+> Updated 2026-10-30 after implementation. The original plan used FastAPI. The stack is now **Express + Next.js** (TypeScript end to end), and the design is otherwise unchanged.
 
 ## Stack
-| Layer | Choice | Why |
+| Layer | Choice | Notes |
 |---|---|---|
-| API | **FastAPI** (Python 3.12, `uv`) | Async, Pydantic schemas shared with agents |
-| Orchestration | **LangGraph 1.0** + `PostgresSaver` checkpointer | Durable multi-step runs, `interrupt()` for human-in-the-loop |
-| LLM | Claude: Sonnet-class for reasoning, Haiku-class for bulk extraction | Strong structured output via tool use |
-| DB | **PostgreSQL 16 + pgvector** | One DB for relational data, vectors, and LangGraph checkpoints |
-| Embeddings | `BAAI/bge-small-en-v1.5` (local, 384-d); Voyage optional | Free, offline, good enough for skill/JD retrieval |
-| Parsing | `pymupdf` (PDF), `python-docx` (DOCX) | Fast, keeps the layout order of text |
-| Jobs | `APScheduler` in-process to start (Celery/Arq later) | Polling job sources, weekly reports |
-| Frontend | Next.js + Tailwind + shadcn/ui (Phase 3); Streamlit for early demos | — |
-| Infra | Docker Compose (api + postgres) | Neither Docker nor Postgres is installed yet: `brew install --cask docker` or `brew install postgresql@16 pgvector` |
+| API | **Express 5** + TypeScript (run with `tsx`), zod validation | `apps/api` |
+| Web | **Next.js 16** (App Router) + **Tailwind 4** | `apps/web`; proxies `/api` and `/auth` to the API so the session cookie is first-party |
+| Orchestration | **LangGraph.js 1.x** + `PostgresSaver` | Two graphs: *prepare* pipeline and *mock interview* loop. Interrupts for human-in-the-loop |
+| LLM | Claude via `@anthropic-ai/sdk` structured outputs | Reasoning: `claude-opus-5-5`. Bulk extraction: `claude-haiku-5-5` (env-configurable). Server-side refusal fallback on, prompt caching on system prompts |
+| DB | **PostgreSQL 17 + pgvector 0.8** | Relational data, vectors (HNSW), LangGraph checkpoints |
+| Embeddings | `Xenova/bge-small-en-v1.5` via transformers.js (local, 384-d) | `EMBEDDINGS=off` falls back to lexical similarity |
+| Parsing | `unpdf` (PDF), `mammoth` (DOCX) | |
+| Jobs | Greenhouse, Lever, Ashby public board APIs; Adzuna (optional key); Arbeitnow | 6h cache, 10-min negative cache, 4 concurrent requests max |
+| Scheduling | In-process hourly tick (`src/scheduler.ts`) | Daily liveness and ghost check, Monday weekly reports |
+| Tests | Vitest + Supertest against a real test DB; Playwright-core e2e smoke | 81 API tests, including an eval gate and LLM-guard tests |
 
-## Agent graph
+## Design principle: rules first, Claude second, guards always
+Every LLM feature has a deterministic path that works with **no API key**:
 
+| Feature | Without Claude | With Claude | Guard on Claude output |
+|---|---|---|---|
+| JD requirements | Section-aware rules + taxonomy | ∪ Haiku extraction | Skill must map to the taxonomy, sentence must be verbatim in the JD |
+| Resume evidence | Section/bullet rules, tiers from outcomes/links | + Haiku skill tagging | Only verbatim lines; only taxonomy skills |
+| Plan | Template per gap, budgeted scheduler | Opus plan | Only gap skills; re-scheduled by our budget scheduler |
+| Questions | Curated bank + JD-grounded + project probes | Opus questions | JD/project questions must quote real sentences |
+| Tailoring | Reorder only (grounded by construction) | + Opus rewording | `checkGrounding`: no new skills, numbers or claims; rejected rewrites are shown |
+| Grading | Rubric keyword coverage (labeled as such) | Opus rubric grading | Covered/missed must be rubric points |
+
+## Agents → code
 ```
-                        ┌──────────────────────┐
-   user request ───────▶│  Supervisor (router) │◀──── weekly cron
-                        └─────────┬────────────┘
-        ┌──────────────┬──────────┼───────────────┬──────────────┐
-        ▼              ▼          ▼               ▼              ▼
-  Job Research     Resume      Matching         Coach        Tracker/Report
-     Agent          Agent        Agent           Agent           Agent
-  (fetch, dedupe,  (parse →    (score per      (plan, Qs,     (applications,
-   extract reqs,   evidence,   requirement,    mock interview, weekly report,
-   ghost-risk)     HITL confirm) market map)   tailoring)      nudges)
-        │              │          │               │              │
-        └──────────────┴──────────┴───────┬───────┴──────────────┘
-                                          ▼
-                            PostgreSQL + pgvector
+Supervisor (fixed pipeline)   src/graph/pipeline.ts      research → ensure_resume ⏸ → confirm_evidence ⏸ → analyze → coach
+Job Research Agent            src/services/research.ts   sources/connectors.ts, sources/relevance.ts, sources/boards.ts
+Resume Agent                  src/extract/resume.ts      + services/evidence.ts (HITL confirm, tier ceilings), services/github.ts
+Matching Agent                src/scoring.ts             pure functions; services/match.ts, services/market.ts
+Coach Agent                   src/coach/*                plan.ts, questions.ts, grade.ts; graph/interview.ts (ask ⏸ → grade → follow-up → finish)
+Tracker/Report Agent          services/applications.ts, services/reports.ts, services/ghost.ts, scheduler.ts
 ```
 
-**Supervisor pattern, but deterministic where possible.** The "prepare me for role X" flow is a **fixed pipeline** (Research → Resume → Match → Coach), not LLM routing. LLM routing is used only for free-form chat ("why is Docker ranked so low?"). Fixed pipelines are cheaper, testable, and debuggable.
-
-### Graph state (sketch)
-```python
-class CareerState(TypedDict):
-    user_id: str
-    target_role: str
-    location: str | None
-    hours_per_week: int
-    resume_version_id: str | None
-    job_ids: list[str]
-    market_map_id: str | None
-    match_report_id: str | None
-    plan_id: str | None
-    pending_confirmation: dict | None   # payload shown to user during interrupt()
-    messages: Annotated[list, add_messages]
+## Scoring (implemented in `src/scoring.ts`)
 ```
-State holds **IDs, not blobs**. Big data lives in Postgres tables. Checkpoints stay small.
-
-### Agents in detail
-
-**1. Job Research Agent**
-- Tools: `search_adzuna(role, country, n)`, `fetch_greenhouse(token)`, `fetch_lever(slug)`, `fetch_ashby(org)`, `ingest_pasted_jd(text|url)`.
-- Steps: fetch → normalize → **dedupe** (hash of company+title+location, plus embedding cosine > 0.95) → relevance filter (embed role query vs JD title+summary, keep the top N) → **requirement extraction** (Haiku, JSON schema) → ghost-risk score.
-- Requirement schema: `{skill_raw, skill_id, kind: must|nice, years_min?, source_sentence}`. `source_sentence` is mandatory because it powers evidence links.
-
-**2. Resume Agent**
-- Parse PDF/DOCX → sections → **evidence items** `{text, section, skills[], tier, metrics[], links[]}`.
-- Tier assignment: rule-based first (skills section → T1; bullet with skill → T2; bullet with number/link/deploy → T3), then an LLM check for edge cases.
-- **HITL:** `interrupt({"evidence": [...]})`. The user confirms or edits before matching. This is how "verified experience" stays honest.
-
-**3. Matching Agent**: mostly **deterministic math**, with the LLM used only for explanations (see Scoring).
-
-**4. Coach Agent**
-- Plan generator: ranked gaps + hours/week + deadline → weekly tasks of type `learn | build | prove | practice`. Every *build* task names the evidence artifact it will produce.
-- Question generator: per gap skill, 3 kinds (concept, applied, "your project" probe) + rubric. RAG over JDs so questions mirror real requirements.
-- Mock interview: a subgraph looping `ask → user answer (interrupt) → grade vs rubric → follow-up or next`. Weak areas are written back to the plan.
-- Resume tailoring: input base version + JD + match report. Output is **edit operations** (reorder, rephrase bullet X, hide Y), not a free-form rewrite. A **grounding check** rejects any edit that introduces a skill/metric absent from the evidence items. New claims trigger `interrupt()` for confirmation.
-
-**5. Tracker/Report Agent**
-- CRUD for applications + events. Weekly cron: tasks done, tier changes, application funnel, next week's focus → stored report + optional email.
-
-## Scoring (the evidence-linked match)
-
-For each requirement *r* in a JD (or each skill *s* in the market map):
-
+importance(r)     = 1.0 must | 0.5 nice           (soft skills shown, never scored)
+evidence(s)       = max of:
+                      direct     tier weight (0, .3, .6, .85, 1.0)
+                      implied    0.9 × weight of a more specific skill (OpenCV ⇒ Computer Vision)
+                      adjacent   0.5 × weight of a related skill (TensorFlow ~ PyTorch)
+coverage(JD)      = Σ importance·evidence / Σ importance
+market_weight(s)  = freq(s) × (0.5 + 0.5·must_rate(s))
+gap_priority(s)   = market_weight × (1 − evidence) × learnability (days 1.0, weeks 0.8, months 0.6)
+readiness         = Σ market_weight·evidence / Σ market_weight
 ```
-importance(r)  = 1.0 if must-have else 0.5
-evidence(s)    = max tier weight over the user's evidence items tagged with s
-                 (0, .3, .6, .85, 1.0) — partial credit 0.5× for "adjacent" skills
-                 via taxonomy/embedding similarity (e.g. TensorFlow → PyTorch)
-coverage(JD)   = Σ importance·evidence / Σ importance          → 0–100%
-market_weight(s) = freq(s across JDs) × (0.5 + 0.5·must_rate(s))
-gap_priority(s)  = market_weight(s) × (1 − evidence(s)) × learnability(s)
+"A, B or C" in a JD marks those skills as alternatives, so none of them is individually a must-have.
+
+## Data model
+Migrations live in `apps/api/migrations/001…007`:
+- **001 core:** users, skills/aliases/unknown_skills, resumes/resume_versions/evidence_items/evidence_skills, jobs/user_jobs/job_requirements, match_reports/match_items
+- **002:** match details (must coverage, via, evidence snapshot)
+- **003 agents:** market_maps/market_skills, plans/plan_tasks, questions, runs/run_events
+- **004 product:** applications/application_events
+- **005:** extractor version, so cached requirements refresh when the extractor improves
+- **006 insights:** interview_sessions/attempts, weekly_reports, users.github_username, jobs.delisted_at
+- **007 ops:** llm_usage
+
+LangGraph checkpoint tables are created by `PostgresSaver.setup()`.
+
+## API surface
 ```
-- `learnability` is an LLM-estimated effort bucket (days/weeks/months), so quick wins rank higher at equal impact.
-- **Every score row stores both links:** `jd_requirement.source_sentence` ↔ `evidence_item.text`. The UI shows them side by side. This is the "evidence-linked" feature.
-- No single magic "ATS score". The output is coverage % plus the reasons.
-
-## Data model (Postgres)
-
+/auth     POST register, login, logout · GET/PATCH/DELETE me · GET me/export, me/usage
+/api      resumes (POST multipart|text, GET) · resume-versions/:id (GET, POST confirm, POST tailor, GET diff)
+          jobs (GET, POST ingest, POST search, GET :id, POST :id/save, DELETE :id, GET :id/versions, POST check-liveness)
+          match (POST) · match-reports/:id
+          careers/prepare (POST → runId) · runs, runs/:id, runs/:id/events (SSE), runs/:id/resume
+          market-maps (GET, latest, :id, POST :id/plan) · plans/active, plans/:id · plan-tasks/:id (PATCH)
+          questions · interviews (POST, GET, :id, :id/answer) · reports, reports/weekly
+          applications (CRUD) · github/import, github/evidence
 ```
-users(id, email, name, target_role, location, hours_per_week, created_at)
-
-resumes(id, user_id, title, is_base)
-resume_versions(id, resume_id, parent_version_id, job_id?, content_json, file_path,
-                change_log_json, created_at)            -- versioning + diff lineage
-evidence_items(id, user_id, resume_version_id?, source: resume|github|assessment|manual,
-               section, text, tier, metrics_json, links_json, confirmed_by_user, embedding vector(384))
-evidence_skills(evidence_id, skill_id)
-
-skills(id, canonical_name, category, esco_uri?, embedding vector(384))
-skill_aliases(alias, skill_id)
-
-jobs(id, source, source_id, url, company, title, location, remote, posted_at,
-     fetched_at, last_seen_at, description, content_hash, ghost_risk, embedding vector(384))
-job_requirements(id, job_id, skill_id, kind, years_min, source_sentence)
-
-market_maps(id, user_id, role, job_ids[], created_at)
-market_skills(market_map_id, skill_id, frequency, must_rate, weight)
-
-match_reports(id, user_id, job_id? | market_map_id?, resume_version_id, coverage, created_at)
-match_items(report_id, skill_id, importance, evidence_score, evidence_id?, requirement_id?, explanation)
-
-plans(id, user_id, role, start_date, end_date, hours_per_week, status)
-plan_tasks(id, plan_id, week, skill_id, type, title, resource_url, est_hours,
-           proof_artifact, status, completed_at)
-
-questions(id, skill_id, job_id?, kind, prompt, rubric_json)
-attempts(id, user_id, question_id, interview_session_id?, answer, score, feedback, created_at)
-interview_sessions(id, user_id, job_id?, mode, started_at, summary_json)
-
-applications(id, user_id, job_id, resume_version_id, status, applied_at, next_followup_at, notes)
-application_events(id, application_id, type, at, notes)
-
-weekly_reports(id, user_id, week_start, content_json)
--- + LangGraph checkpoint tables (created by PostgresSaver.setup())
-```
-Indexes: HNSW on every `embedding`, unique `(source, source_id)` on jobs, `(user_id, status)` on applications.
-
-## API surface (FastAPI)
-
-```
-POST /resumes                    upload → parse → returns evidence for confirmation
-POST /resumes/{id}/confirm       resume the interrupted graph with user edits
-POST /jobs/search                {role, location, n} → research run
-POST /jobs/ingest                {text | url}
-POST /careers/prepare            {role, location, hours_per_week, deadline} → full pipeline (thread_id)
-GET  /runs/{thread_id}           status / pending interrupt payload
-POST /runs/{thread_id}/resume    Command(resume=…)
-GET  /market-maps/{id}
-GET  /match-reports/{id}
-GET  /plans/{id}  PATCH /plan-tasks/{id}
-POST /resumes/{id}/tailor        {job_id} → new version + diff
-POST /interviews                 start mock; POST /interviews/{id}/answer
-CRUD /applications
-GET  /reports/weekly?week=
-```
-Long runs are async: return `thread_id` and stream progress via SSE (`/runs/{id}/events`).
 
 ## Repo layout
-
 ```
 careerpilot/
-├── docs/                      ← this plan
-├── pyproject.toml             (uv, python 3.12)
-├── docker-compose.yml         (postgres+pgvector, api)
-├── .env.example               ANTHROPIC_API_KEY, DATABASE_URL, ADZUNA_APP_ID/KEY
-├── app/
-│   ├── main.py                FastAPI app
-│   ├── api/                   routers (resumes, jobs, careers, plans, interviews, applications)
-│   ├── db/                    SQLAlchemy models, Alembic migrations
-│   ├── graph/
-│   │   ├── state.py
-│   │   ├── pipeline.py        fixed prepare-for-role graph
-│   │   ├── supervisor.py      free-form chat router
-│   │   └── agents/            research.py resume.py matching.py coach.py tracker.py
-│   ├── sources/               adzuna.py greenhouse.py lever.py ashby.py pasted.py
-│   ├── skills/                taxonomy.py (alias + embedding normalization), seed_skills.csv
-│   ├── scoring.py             pure functions, heavily unit-tested
-│   ├── llm.py                 Claude client, structured-output helpers, prompt caching
-│   └── embeddings.py
-├── evals/                     gold JDs/resumes + scripts (see 05-evaluation.md)
-├── tests/
-└── web/                       Next.js (Phase 3)
+├── docs/                    plan + this architecture
+├── apps/api/
+│   ├── migrations/          SQL, applied on boot
+│   ├── src/{extract,skills,sources,coach,tailor,graph,services,routes}/
+│   ├── src/{scoring,llm,embeddings,auth,ratelimit,scheduler,cli}.ts
+│   ├── evals/               labeled resumes/JDs + runner
+│   └── test/                vitest suites
+├── apps/web/src/{app,components,lib}/   + e2e/smoke.mjs
+├── docker-compose.yml, apps/*/Dockerfile
+└── .github/workflows/ci.yml
 ```
 
-## Cross-cutting concerns
-- **Privacy:** resumes are PII. Encrypt the file store, provide a delete-my-data endpoint, never send PII to job sources, and don't log resume text.
-- **Cost control:** Haiku for extraction, prompt caching on long system prompts, cache JD extraction by `content_hash` (the same JD is never extracted twice across users).
-- **Rate limits:** per-source token bucket. Cache fetched boards for 6–12h.
-- **Observability:** LangSmith or simple structured logs per node (latency, tokens, cost).
-- **Auth:** start single-user (local). Add Clerk/Auth.js or FastAPI-Users in Phase 3.
+## Cross-cutting
+- **Privacy:** resumes stay in Postgres only. JSON export and cascading delete are available. Resume text is never logged. Job sources receive only role and location.
+- **Cost:** every Claude call is logged to `llm_usage` with its USD cost and attributed to the user via AsyncLocalStorage (`/auth/me/usage`). JD extraction is cached by content hash and extractor version.
+- **Safety rails:** rate limits on auth and expensive endpoints, the app refuses to boot in production with a weak `SESSION_SECRET`, and users are isolated on every query (tested).
+- **Scaling notes:** the scheduler and rate limiter are in-process. Move them to a worker and Redis if you run more than one API instance.

@@ -153,6 +153,7 @@ export async function generatePlan(input: PlanInput): Promise<{ tasks: PlanTaskD
     "plan",
     async () => {
       const out = await structured({
+        label: "plan",
         tier: "reasoning",
         system: PLAN_SYSTEM,
         input: JSON.stringify({

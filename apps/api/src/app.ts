@@ -14,6 +14,7 @@ import { insightsRouter } from "./routes/insights.js";
 
 export function createApp() {
   const app = express();
+  app.set("trust proxy", 1); // behind one reverse proxy (Fly/Railway/Render) so req.ip is the client
   app.use(helmet());
   app.use(cors({ origin: config.WEB_ORIGIN, credentials: true }));
   app.use(express.json({ limit: "2mb" }));

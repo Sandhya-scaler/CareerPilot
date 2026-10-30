@@ -22,3 +22,7 @@ const raw = Object.fromEntries(
 
 export const config = Env.parse(raw);
 export const isProd = config.NODE_ENV === "production";
+
+if (isProd && (config.SESSION_SECRET === "dev-only-secret-change-me" || config.SESSION_SECRET.length < 32)) {
+  throw new Error("SESSION_SECRET must be set to a random string of 32+ characters in production");
+}

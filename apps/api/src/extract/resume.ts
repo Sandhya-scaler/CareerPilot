@@ -145,7 +145,8 @@ export async function parseResume(text: string): Promise<ParsedResume & { usedLl
   const parsed = parseResumeRules(text);
   const { value, usedLlm } = await withFallback(
     "resume-tagging",
-    () => structured({ tier: "extraction", system: RESUME_SYSTEM, input: text, schema: LlmEvidence }),
+    () => structured({
+        label: "resume-tagging", tier: "extraction", system: RESUME_SYSTEM, input: text, schema: LlmEvidence }),
     () => ({ items: [] }),
   );
   for (const item of value.items) {

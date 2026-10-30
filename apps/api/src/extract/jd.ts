@@ -139,7 +139,8 @@ export async function extractRequirements(jdText: string): Promise<{ requirement
   const rules = extractRequirementsRules(jdText);
   const { value, usedLlm } = await withFallback(
     "jd-extraction",
-    () => structured({ tier: "extraction", system: JD_SYSTEM, input: jdText, schema: LlmRequirements }),
+    () => structured({
+        label: "jd-extraction", tier: "extraction", system: JD_SYSTEM, input: jdText, schema: LlmRequirements }),
     () => ({ requirements: [] }),
   );
   const found = new Map(rules.map((r) => [r.skill, r]));
