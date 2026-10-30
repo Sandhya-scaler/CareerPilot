@@ -1,0 +1,14 @@
+GenAI Engineer
+
+About the role
+Build LLM-powered assistants for enterprise customers.
+
+What we're looking for
+- Strong Python and experience building APIs with FastAPI.
+- Hands-on experience with LLMs, prompt engineering and retrieval-augmented generation (RAG).
+- Experience with vector databases (pgvector, Pinecone or FAISS) and embeddings.
+- Experience building AI agents with LangChain or LangGraph.
+
+Nice to have
+- Experience fine-tuning models with LoRA.
+- Familiarity with Docker and GCP.

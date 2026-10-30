@@ -1,0 +1,11 @@
+SDE Intern – Backend
+
+Requirements
+- Strong fundamentals in data structures, algorithms and object-oriented programming.
+- Proficiency in at least one of Java, Go or Python.
+- Understanding of REST APIs and relational databases (MySQL or PostgreSQL).
+- Familiarity with Git.
+
+Good to have
+- Exposure to Docker, Redis or message queues.
+- Knowledge of system design basics.

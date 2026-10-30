@@ -1,0 +1,34 @@
+Aarav Mehta
+aarav.mehta@example.com | +91 98xxxxxx10 | github.com/aaravm | linkedin.com/in/aaravm
+Bengaluru, India
+
+EDUCATION
+B.Tech in Electronics and Communication Engineering, XYZ Institute of Technology    2022 – 2026
+CGPA: 8.4/10
+Relevant coursework: Digital Image Processing, Linear Algebra, Probability and Statistics, Data Structures
+
+PROJECTS
+Lane Detection for Indian Roads | Python, OpenCV    Jan 2025 – Mar 2025
+• Built a classical lane detection pipeline using Canny edges and Hough transforms on 2,000 dashcam frames.
+• Reduced false detections by 18% using region-of-interest masking and temporal smoothing.
+• Code and demo: github.com/aaravm/lane-detect
+
+Handwritten Digit Classifier
+• Trained a small CNN in Keras on MNIST reaching 98.9% test accuracy.
+• Wrote a Flask endpoint to serve predictions from the trained model.
+
+Campus Attendance Dashboard
+• Created a web dashboard with HTML, CSS and JavaScript to visualize attendance data pulled from a MySQL database.
+
+EXPERIENCE
+Research Intern, Signal Processing Lab, XYZ Institute    May 2024 – Jul 2024
+• Implemented image denoising filters in MATLAB and compared them with NumPy implementations.
+• Wrote weekly reports and presented findings to the lab group.
+
+TECHNICAL SKILLS
+Languages: Python, C, MATLAB, SQL
+Libraries: OpenCV, NumPy, Pandas, Matplotlib, PyTorch (basic)
+Tools: Git, Linux, Jupyter
+
+ACHIEVEMENTS
+• Finalist, Smart India Hackathon 2024 (team of 6) – built a crop disease detector prototype.

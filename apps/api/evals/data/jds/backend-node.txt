@@ -1,0 +1,14 @@
+Backend Developer – Node.js
+
+The role
+Build APIs that power our logistics platform used by 5,000 businesses.
+
+Requirements
+- 2+ years with Node.js and Express or NestJS.
+- Strong in MongoDB or PostgreSQL and database design.
+- Experience designing RESTful APIs and integrating third-party services.
+- Hands-on with AWS (EC2, S3, Lambda) and Docker.
+
+Nice to have
+- Experience with Redis, Kafka or RabbitMQ.
+- Experience with microservices and CI/CD.

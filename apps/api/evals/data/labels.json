@@ -1,0 +1,255 @@
+{
+  "_note": "Hand labels for synthetic, anonymized documents. JD labels: skill -> must|nice (soft skills included; scoring ignores them). Resume labels: skill -> tier (1 claimed, 2 applied, 3 demonstrated). Labeled by reading the document, not by running the extractor.",
+  "jds": {
+    "cv-intern-a": {
+      "must": [
+        "Python",
+        "PyTorch",
+        "CNNs",
+        "Computer Vision",
+        "OpenCV",
+        "Object Detection"
+      ],
+      "nice": [
+        "ONNX",
+        "Model Optimization",
+        "Docker",
+        "C++",
+        "Edge AI",
+        "Data Augmentation"
+      ]
+    },
+    "cv-intern-b": {
+      "must": [
+        "Python",
+        "NumPy",
+        "Deep Learning",
+        "Computer Vision",
+        "Image Segmentation",
+        "Object Tracking",
+        "Camera Calibration",
+        "Communication",
+        "Video Analytics"
+      ],
+      "nice": [
+        "PyTorch",
+        "TensorFlow",
+        "Weights & Biases",
+        "REST APIs",
+        "Research",
+        "Git",
+        "Linux"
+      ]
+    },
+    "ml-engineer": {
+      "must": [
+        "Python",
+        "scikit-learn",
+        "XGBoost",
+        "Docker",
+        "Kubernetes",
+        "AWS",
+        "MLflow",
+        "Apache Airflow",
+        "SQL",
+        "Apache Spark",
+        "Machine Learning",
+        "Statistics",
+        "Model Evaluation",
+        "CI/CD",
+        "Unit Testing"
+      ],
+      "nice": [
+        "Apache Kafka",
+        "PyTorch"
+      ]
+    },
+    "sde-intern-backend": {
+      "must": [
+        "Data Structures",
+        "Algorithms",
+        "Object-Oriented Programming",
+        "REST APIs"
+      ],
+      "nice": [
+        "Java",
+        "Go",
+        "Python",
+        "MySQL",
+        "PostgreSQL",
+        "Git",
+        "Docker",
+        "Redis",
+        "RabbitMQ",
+        "System Design"
+      ]
+    },
+    "data-analyst": {
+      "must": [
+        "SQL",
+        "Statistics",
+        "Excel",
+        "Python",
+        "Pandas",
+        "Data Analysis",
+        "Communication"
+      ],
+      "nice": [
+        "Tableau",
+        "Power BI",
+        "BigQuery",
+        "Snowflake",
+        "dbt"
+      ]
+    },
+    "frontend-dev": {
+      "must": [
+        "React",
+        "TypeScript",
+        "HTML",
+        "CSS",
+        "JavaScript",
+        "Redux",
+        "Unit Testing"
+      ],
+      "nice": [
+        "Next.js",
+        "Web Performance",
+        "Accessibility",
+        "GraphQL"
+      ]
+    },
+    "backend-node": {
+      "must": [
+        "Node.js",
+        "Database Design",
+        "REST APIs",
+        "AWS",
+        "Docker"
+      ],
+      "nice": [
+        "Express",
+        "NestJS",
+        "MongoDB",
+        "PostgreSQL",
+        "Redis",
+        "Apache Kafka",
+        "RabbitMQ",
+        "Microservices",
+        "CI/CD"
+      ]
+    },
+    "genai-engineer": {
+      "must": [
+        "Python",
+        "FastAPI",
+        "REST APIs",
+        "LLMs",
+        "Prompt Engineering",
+        "RAG",
+        "Vector Databases",
+        "Embeddings",
+        "AI Agents",
+        "LangChain"
+      ],
+      "nice": [
+        "Fine-tuning",
+        "Docker",
+        "GCP"
+      ]
+    }
+  },
+  "resumes": {
+    "cv-student": {
+      "Python": 3,
+      "OpenCV": 3,
+      "Keras": 3,
+      "CNNs": 3,
+      "Flask": 2,
+      "HTML": 2,
+      "CSS": 2,
+      "JavaScript": 2,
+      "MySQL": 2,
+      "MATLAB": 2,
+      "NumPy": 2,
+      "C": 1,
+      "SQL": 1,
+      "Pandas": 1,
+      "Data Visualization": 1,
+      "PyTorch": 1,
+      "Git": 1,
+      "Linux": 1,
+      "Jupyter": 1,
+      "Computer Vision": 1,
+      "Linear Algebra": 1,
+      "Statistics": 1,
+      "Data Structures": 1
+    },
+    "backend-switcher": {
+      "Spring Boot": 3,
+      "Microservices": 3,
+      "Apache Airflow": 3,
+      "CI/CD": 3,
+      "Unit Testing": 3,
+      "Git": 3,
+      "Python": 3,
+      "FastAPI": 3,
+      "REST APIs": 3,
+      "scikit-learn": 3,
+      "XGBoost": 3,
+      "Docker": 3,
+      "Kubernetes": 3,
+      "AWS": 3,
+      "Apache Kafka": 2,
+      "PostgreSQL": 2,
+      "Redis": 2,
+      "MLflow": 3,
+      "Pandas": 2,
+      "NumPy": 2,
+      "Recommender Systems": 2,
+      "Machine Learning": 2,
+      "Java": 1,
+      "SQL": 1
+    },
+    "data-analyst-fresher": {
+      "SQL": 3,
+      "PostgreSQL": 3,
+      "Excel": 3,
+      "Python": 3,
+      "Pandas": 3,
+      "Data Analysis": 3,
+      "Data Visualization": 3,
+      "Power BI": 2,
+      "Statistics": 2,
+      "Tableau": 2,
+      "Communication": 1
+    },
+    "frontend-newgrad": {
+      "React": 3,
+      "TypeScript": 3,
+      "Web Performance": 3,
+      "Next.js": 3,
+      "Supabase": 3,
+      "Selenium": 3,
+      "CI/CD": 3,
+      "Git": 3,
+      "Node.js": 3,
+      "Express": 3,
+      "WebSockets": 3,
+      "Redux": 2,
+      "Unit Testing": 2,
+      "Figma": 2,
+      "Tailwind CSS": 2,
+      "CSS": 2,
+      "Accessibility": 2,
+      "JavaScript": 1,
+      "HTML": 1,
+      "MongoDB": 1,
+      "Data Structures": 2,
+      "Algorithms": 2
+    }
+  },
+  "_revisions": [
+    "2026-10-30: backend-switcher Docker/Kubernetes/AWS/MLflow 2->3. The lines say 'deployed them on Kubernetes (EKS)' and 'served the model', which meet the tier-3 'shipped' definition; original labels were too strict."
+  ]
+}

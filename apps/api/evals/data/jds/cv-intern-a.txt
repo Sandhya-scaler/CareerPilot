@@ -1,0 +1,24 @@
+Computer Vision Intern (6 months) - Bengaluru
+
+About Us
+We build perception software for warehouse robots. Our team works with Kubernetes-scale fleets and loves good coffee.
+
+What you'll do
+- Train and evaluate object detection models (YOLO, DETR) on our warehouse datasets.
+- Write data pipelines for labeling, augmentation and dataset versioning.
+- Optimize models for edge deployment on NVIDIA Jetson.
+
+Requirements
+- Currently pursuing a B.Tech/M.Tech in CS, EE or related field.
+- Strong programming skills in Python.
+- Hands-on experience with PyTorch.
+- Solid understanding of CNNs and image processing fundamentals.
+- Experience with OpenCV.
+
+Nice to have
+- Experience with ONNX or TensorRT.
+- Familiarity with Docker.
+- Knowledge of C++.
+
+Benefits
+Stipend, free lunch, MacBook.

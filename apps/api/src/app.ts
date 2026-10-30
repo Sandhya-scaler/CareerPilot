@@ -8,6 +8,7 @@ import { pool } from "./db/pool.js";
 import { embeddingsEnabled } from "./embeddings.js";
 import { errorHandler, HttpError } from "./http.js";
 import { llmEnabled } from "./llm.js";
+import { coreRouter } from "./routes/core.js";
 
 export function createApp() {
   const app = express();
@@ -25,6 +26,7 @@ export function createApp() {
 
   const api = express.Router();
   api.use(requireUser);
+  api.use(coreRouter);
   app.use("/api", api);
 
   app.use((_req, _res, next) => next(new HttpError(404, "route not found")));

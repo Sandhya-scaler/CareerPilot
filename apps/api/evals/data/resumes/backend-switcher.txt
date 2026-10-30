@@ -1,0 +1,31 @@
+Priya Raman
+priya.raman@example.com · Pune · github.com/priyar-dev
+
+SUMMARY
+Backend engineer with 3 years of experience building Java and Python services, now moving into machine learning engineering.
+
+WORK EXPERIENCE
+Software Engineer II — FinServe Payments, Pune          Jul 2022 – Present
+- Designed and built 6 Spring Boot microservices handling 2M+ payment requests per day with p99 latency under 120 ms.
+- Migrated batch reconciliation jobs from cron scripts to Apache Airflow, cutting failures by 40%.
+- Containerized services with Docker and deployed them on Kubernetes (EKS) with Helm charts.
+- Built Kafka consumers for real-time fraud signals and stored aggregates in PostgreSQL and Redis.
+- Set up CI/CD pipelines in GitHub Actions; added unit tests with JUnit raising coverage from 45% to 80%.
+
+Software Engineering Intern — DataCrate                  Jan 2022 – Jun 2022
+- Built REST APIs in Python with FastAPI for an internal analytics tool used by 40 analysts.
+
+PROJECTS
+Churn Prediction (personal)
+- Trained gradient boosting models with scikit-learn and XGBoost on a public telecom dataset, reaching 0.86 AUC.
+- Tracked experiments in MLflow and served the model behind a FastAPI endpoint in Docker.
+
+Movie Recommender
+- Implemented collaborative filtering with Pandas and NumPy; wrote a blog post explaining the approach.
+
+SKILLS
+Java, Python, SQL, Spring Boot, FastAPI, Docker, Kubernetes, AWS, PostgreSQL, Redis, Kafka, Airflow, scikit-learn, Pandas, Git
+
+CERTIFICATIONS
+AWS Certified Developer – Associate (2023)
+Machine Learning Specialization – Coursera (2024)

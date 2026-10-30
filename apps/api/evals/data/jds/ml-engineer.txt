@@ -1,0 +1,19 @@
+Machine Learning Engineer (2-4 years)
+
+You will build and operate the models behind our lending decisions.
+
+What you will do
+- Build training and inference pipelines for credit-risk models using Python, scikit-learn and XGBoost.
+- Productionize models with Docker and Kubernetes on AWS.
+- Own model monitoring and retraining with MLflow and Airflow.
+- Design feature pipelines in SQL and Apache Spark.
+
+What we are looking for
+- 2+ years of experience shipping ML models to production.
+- Strong Python and SQL.
+- Solid grasp of statistics and model evaluation.
+- Experience with CI/CD and unit testing.
+
+Bonus points
+- Experience with Kafka or real-time feature stores.
+- Exposure to PyTorch.

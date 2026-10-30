@@ -1,0 +1,18 @@
+ML Intern – Computer Vision
+
+Acme Vision is looking for a curious intern to join our retail analytics team.
+
+Responsibilities:
+* Develop image segmentation and tracking models for in-store video analytics.
+* Run experiments, track metrics in Weights & Biases, and present findings.
+* Collaborate with backend engineers to deploy models as REST APIs.
+
+Qualifications:
+* Proficiency in Python and NumPy.
+* Experience with deep learning frameworks such as PyTorch or TensorFlow.
+* Understanding of computer vision concepts: segmentation, object tracking, camera calibration.
+* Good written communication.
+
+Preferred:
+* Publications in CVPR/ICCV/ECCV.
+* Experience with Git and Linux.

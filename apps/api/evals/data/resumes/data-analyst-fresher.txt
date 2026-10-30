@@ -1,0 +1,28 @@
+Rohan Verma
+rohan.verma@example.com | Delhi | linkedin.com/in/rohanv
+
+OBJECTIVE
+Commerce graduate looking for a data analyst role where I can use SQL and visualization skills to support business decisions.
+
+EDUCATION
+B.Com (Hons), Delhi University, 2021 – 2024
+
+INTERNSHIPS
+Business Analyst Intern, QuickMart Retail          Jun 2024 – Dec 2024
+• Wrote SQL queries in PostgreSQL to build weekly sales reports for 120 stores.
+• Built a Power BI dashboard tracking inventory turnover that the ops team uses daily.
+• Automated a manual Excel reconciliation with Python and Pandas, saving 6 hours per week.
+
+PROJECTS
+Zomato Restaurant Analysis
+• Performed exploratory data analysis on 9,000 restaurant listings using Pandas and Seaborn.
+• Ran hypothesis testing to compare ratings across cities.
+
+Sales Dashboard in Tableau
+• Designed an interactive Tableau dashboard for a sample superstore dataset.
+
+SKILLS
+SQL, Excel (pivot tables, VLOOKUP), Power BI, Tableau, Python, Pandas, Statistics, Communication
+
+CERTIFICATIONS
+Google Data Analytics Professional Certificate

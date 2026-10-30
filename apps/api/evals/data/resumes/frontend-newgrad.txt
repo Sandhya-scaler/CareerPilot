@@ -1,0 +1,26 @@
+Sneha Kulkarni
+sneha.k@example.com · Hyderabad · sneha.dev · github.com/snehak
+
+Education
+B.E. Computer Science, ABC College of Engineering — 2025 — CGPA 8.9
+
+Experience
+Frontend Developer Intern, Shoplane (e-commerce startup) | Jan 2025 – Jun 2025
+- Rebuilt the product listing page in React and TypeScript, improving Lighthouse performance score from 54 to 91.
+- Implemented a checkout flow with Redux Toolkit and wrote Jest unit tests for reducers.
+- Worked with designers in Figma to ship a responsive design system using Tailwind CSS.
+
+Projects
+DevNotes — Markdown note app (Next.js, Supabase) | sneha.dev/devnotes
+- Built a Next.js app with server components and Supabase auth; 300+ monthly users.
+- Added end-to-end tests with Playwright run in GitHub Actions CI.
+
+Realtime Chat
+- Node.js and Express backend with Socket.io; deployed on Render.
+
+Skills
+JavaScript, TypeScript, React, Next.js, HTML, CSS, Tailwind CSS, Redux, Node.js, Express, MongoDB, Git, Jest, Figma
+Data Structures and Algorithms — solved 400+ LeetCode problems
+
+Achievements
+- Winner, college hackathon 2024 (built an accessibility checker for websites).

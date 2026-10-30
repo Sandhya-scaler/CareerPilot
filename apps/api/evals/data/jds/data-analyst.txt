@@ -1,0 +1,16 @@
+Data Analyst – Growth Team
+
+Key Responsibilities
+- Write complex SQL queries to analyze user funnels and retention.
+- Build and maintain dashboards in Tableau or Power BI.
+- Design and analyze A/B tests with product managers.
+
+Must have
+- 0-2 years of experience in an analytics role.
+- Advanced Excel and strong SQL.
+- Working knowledge of Python (Pandas) for data analysis.
+- Strong communication skills; able to present insights to stakeholders.
+
+Preferred
+- Experience with BigQuery or Snowflake.
+- Familiarity with dbt.

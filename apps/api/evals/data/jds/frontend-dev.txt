@@ -1,0 +1,14 @@
+Frontend Engineer (React)
+
+We're hiring a frontend engineer to own our customer dashboard.
+
+You have:
+- 1+ years building production web apps with React and TypeScript.
+- Deep knowledge of HTML, CSS and modern JavaScript.
+- Experience with state management (Redux or Zustand).
+- Experience writing unit tests (Jest, React Testing Library).
+
+It's a plus if you have:
+- Experience with Next.js.
+- Knowledge of web performance and accessibility (WCAG).
+- Experience with GraphQL.

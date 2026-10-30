@@ -1,4 +1,4 @@
-import { SKILLS, type Category, type SkillDef } from "./data.js";
+import { PARENTS, SKILLS, type Category, type SkillDef } from "./data.js";
 
 export interface SkillMatch {
   skill: string;
@@ -25,8 +25,9 @@ export class Taxonomy {
   private ciRegex: RegExp;
   private csRegex: RegExp | null;
   private relatedMap = new Map<string, Set<string>>();
+  private childrenMap = new Map<string, Set<string>>();
 
-  constructor(defs: SkillDef[] = SKILLS) {
+  constructor(defs: SkillDef[] = SKILLS, parents: Record<string, string[]> = PARENTS) {
     for (const d of defs) {
       if (this.skills.has(d.name)) throw new Error(`duplicate skill ${d.name}`);
       this.skills.set(d.name, d);
@@ -47,6 +48,14 @@ export class Taxonomy {
       for (const r of d.related ?? []) {
         if (!this.skills.has(r)) throw new Error(`${d.name} relates to unknown skill ${r}`);
         this.link(d.name, r);
+      }
+    }
+    for (const [child, ps] of Object.entries(parents)) {
+      if (!this.skills.has(child)) throw new Error(`PARENTS: unknown skill ${child}`);
+      for (const p of ps) {
+        if (!this.skills.has(p)) throw new Error(`PARENTS: ${child} -> unknown skill ${p}`);
+        if (!this.childrenMap.has(p)) this.childrenMap.set(p, new Set());
+        this.childrenMap.get(p)!.add(child);
       }
     }
     const byLength = (xs: string[]) => xs.sort((a, b) => b.length - a.length).map(escape).map((a) => a.replace(/ /g, "\\s+"));
@@ -73,6 +82,19 @@ export class Taxonomy {
 
   related(name: string): string[] {
     return [...(this.relatedMap.get(name) ?? [])];
+  }
+
+  /** Skills whose evidence implies this one (transitively): OpenCV and YOLO imply Computer Vision. */
+  descendants(name: string): string[] {
+    const out = new Set<string>();
+    const stack = [...(this.childrenMap.get(name) ?? [])];
+    while (stack.length) {
+      const c = stack.pop()!;
+      if (out.has(c) || c === name) continue;
+      out.add(c);
+      stack.push(...(this.childrenMap.get(c) ?? []));
+    }
+    return [...out];
   }
 
   /** Every alias for a skill (for display / grounding checks). */
