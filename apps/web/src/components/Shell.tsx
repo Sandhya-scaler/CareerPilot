@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { api } from "@/lib/api";
 import type { Me } from "@/lib/types";
+import { Feedback } from "./Feedback";
 
 const NAV = [
   { href: "/", label: "Overview" },
@@ -77,10 +78,12 @@ export function Shell({ children }: { children: ReactNode }) {
             </ul>
             <div className="mt-6 border-t border-rule px-3 pt-4 text-sm text-ink-faint">
               <p className="truncate" title={me.email}>{me.name ?? me.email}</p>
-              <p className="mt-1 flex gap-3">
+              <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
                 <Link href="/account" className="text-action hover:underline">Account</Link>
+                {me.is_admin && <Link href="/admin" className="text-action hover:underline">Beta metrics</Link>}
                 <button onClick={logout} className="text-action hover:underline">Sign out</button>
               </p>
+              <p className="mt-1"><Feedback /></p>
             </div>
           </nav>
         </aside>

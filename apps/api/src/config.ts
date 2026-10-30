@@ -9,10 +9,18 @@ const Env = z.object({
   ADZUNA_APP_ID: z.string().optional(),
   ADZUNA_APP_KEY: z.string().optional(),
   GITHUB_TOKEN: z.string().optional(),
-  API_PORT: z.coerce.number().default(4000),
+  // PORT is what most hosts (Render, Railway, Fly) inject.
+  API_PORT: z.coerce.number().default(Number(process.env.PORT) || 4000),
   WEB_ORIGIN: z.string().default("http://localhost:3000"),
   SESSION_SECRET: z.string().min(16).default("dev-only-secret-change-me"),
   NODE_ENV: z.string().default("development"),
+  /** smtps://user:pass@host:465 (any provider). Unset = no emails. */
+  SMTP_URL: z.string().optional(),
+  EMAIL_FROM: z.string().default("CareerPilot <reports@careerpilot.local>"),
+  /** Public URL of the web app, for links in emails. */
+  APP_URL: z.string().default("http://localhost:3000"),
+  /** Comma-separated emails that get admin access (beta metrics). */
+  ADMIN_EMAILS: z.string().default(""),
 });
 
 // Empty strings in .env mean "unset".

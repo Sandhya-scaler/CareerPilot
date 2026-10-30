@@ -1,0 +1,53 @@
+# Render Blueprint: Dashboard → New → Blueprint → pick this repo.
+# Creates Postgres 17 (pgvector is available on Render Postgres), the API and the web app.
+# Fill the `sync: false` values when Render prompts for them (see docs/06-operations.md).
+databases:
+  - name: careerpilot-db
+    plan: basic-256mb
+    postgresMajorVersion: "17"
+    databaseName: careerpilot
+    user: careerpilot
+
+services:
+  - type: web
+    name: careerpilot-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase: { name: careerpilot-db, property: connectionString }
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: APP_URL # public URL of careerpilot-web, e.g. https://careerpilot-web.onrender.com
+        sync: false
+      - key: WEB_ORIGIN # same as APP_URL
+        sync: false
+      - key: ADMIN_EMAILS # your email, for /admin beta metrics
+        sync: false
+      - key: SMTP_URL # optional: smtps://user:pass@smtp.resend.com:465
+        sync: false
+      - key: EMAIL_FROM # optional: CareerPilot <reports@yourdomain>
+        sync: false
+      - key: ADZUNA_APP_ID
+        sync: false
+      - key: ADZUNA_APP_KEY
+        sync: false
+
+  - type: web
+    name: careerpilot-web
+    runtime: docker
+    dockerfilePath: ./apps/web/Dockerfile
+    dockerContext: .
+    plan: starter
+    envVars:
+      # Build-time: where Next proxies /api and /auth. The API's public URL,
+      # e.g. https://careerpilot-api.onrender.com
+      - key: API_URL
+        sync: false

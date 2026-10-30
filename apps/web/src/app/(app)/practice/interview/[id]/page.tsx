@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { ErrorNote, Loading, PageHeader, Section } from "@/components/ui";
+import { DictateButton, SpeakButton } from "@/components/Voice";
 import { api, errorText, useApi } from "@/lib/api";
 
 interface Grade {
@@ -93,6 +94,7 @@ export default function InterviewPage() {
         <form onSubmit={submit} className="max-w-3xl">
           {s.question.skill && <p className="mb-1 text-[13px] font-medium text-proof-4">{s.question.skill}{s.question.isFollowup ? ", follow-up" : ""}</p>}
           <p className="text-[20px] leading-snug">{s.question.prompt}</p>
+          <div className="mt-1"><SpeakButton text={s.question.prompt} /></div>
           <label className="sr-only" htmlFor="answer">Your answer</label>
           <textarea
             id="answer"
@@ -102,6 +104,7 @@ export default function InterviewPage() {
             placeholder="Type your answer"
             autoFocus
           />
+          <div className="mt-2"><DictateButton value={answer} onChange={setAnswer} /></div>
           {err && <div className="mt-2"><ErrorNote>{err}</ErrorNote></div>}
           <div className="mt-3 flex items-center gap-3">
             <button className="btn" disabled={busy || answer.trim().length === 0}>{busy ? "Grading…" : "Submit answer"}</button>

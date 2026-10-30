@@ -8,6 +8,7 @@ import { pool } from "./db/pool.js";
 import { embeddingsEnabled } from "./embeddings.js";
 import { errorHandler, HttpError } from "./http.js";
 import { llmEnabled } from "./llm.js";
+import { adminRouter } from "./routes/admin.js";
 import { agentsRouter } from "./routes/agents.js";
 import { coreRouter } from "./routes/core.js";
 import { insightsRouter } from "./routes/insights.js";
@@ -32,6 +33,7 @@ export function createApp() {
   api.use(coreRouter);
   api.use(agentsRouter);
   api.use(insightsRouter);
+  api.use(adminRouter);
   app.use("/api", api);
 
   app.use((_req, _res, next) => next(new HttpError(404, "route not found")));

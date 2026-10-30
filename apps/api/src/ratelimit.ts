@@ -1,28 +1,33 @@
 import type { NextFunction, Request, Response } from "express";
+import { query } from "./db/pool.js";
 import { HttpError } from "./http.js";
 
 /**
- * Fixed-window in-memory rate limiter (single instance). Keys by user when signed in, else by IP.
- * Swap for Redis if the API runs on more than one instance.
+ * Fixed-window rate limiter backed by Postgres (one atomic upsert per request), so limits hold
+ * across any number of API instances. Keys by user when signed in, else by client IP.
  */
 export function rateLimit(opts: { windowMs: number; max: number; name: string }) {
-  const hits = new Map<string, { count: number; resetAt: number }>();
-  return (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     if (process.env.DISABLE_RATE_LIMIT === "1") return next();
-    const key = `${opts.name}:${req.userId ?? req.ip}`;
-    const now = Date.now();
-    let h = hits.get(key);
-    if (!h || h.resetAt <= now) {
-      h = { count: 0, resetAt: now + opts.windowMs };
-      hits.set(key, h);
+    try {
+      const key = `${opts.name}:${req.userId ?? req.ip}`;
+      const [row] = await query<{ count: number; reset_at: Date }>(
+        `INSERT INTO rate_limits (key, count, reset_at) VALUES ($1, 1, now() + $2 * interval '1 millisecond')
+         ON CONFLICT (key) DO UPDATE SET
+           count = CASE WHEN rate_limits.reset_at <= now() THEN 1 ELSE rate_limits.count + 1 END,
+           reset_at = CASE WHEN rate_limits.reset_at <= now() THEN EXCLUDED.reset_at ELSE rate_limits.reset_at END
+         RETURNING count, reset_at`,
+        [key, opts.windowMs],
+      );
+      const waitS = Math.max(1, Math.ceil((row!.reset_at.getTime() - Date.now()) / 1000));
+      res.setHeader("RateLimit-Remaining", String(Math.max(0, opts.max - row!.count)));
+      if (row!.count > opts.max) {
+        res.setHeader("Retry-After", String(waitS));
+        return next(new HttpError(429, `too many requests, try again in ${Math.ceil(waitS / 60)} min`));
+      }
+      next();
+    } catch (e) {
+      next(e);
     }
-    h.count++;
-    res.setHeader("RateLimit-Remaining", String(Math.max(0, opts.max - h.count)));
-    if (h.count > opts.max) {
-      res.setHeader("Retry-After", String(Math.ceil((h.resetAt - now) / 1000)));
-      return next(new HttpError(429, `too many requests, try again in ${Math.ceil((h.resetAt - now) / 60000)} min`));
-    }
-    if (hits.size > 50_000) for (const [k, v] of hits) if (v.resetAt <= now) hits.delete(k);
-    next();
   };
 }

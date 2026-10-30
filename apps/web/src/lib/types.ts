@@ -7,6 +7,8 @@ export interface Me {
   target_role: string | null;
   location: string | null;
   hours_per_week: number;
+  email_reports: boolean;
+  is_admin: boolean;
 }
 
 export interface Evidence {

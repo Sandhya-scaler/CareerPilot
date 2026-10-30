@@ -18,7 +18,8 @@ export default function AccountPage() {
   const { me, refresh } = useMe();
   const router = useRouter();
   const usage = useApi<UsageRow[]>("/auth/me/usage");
-  const [form, setForm] = useState({ name: me.name ?? "", hours_per_week: me.hours_per_week });
+  const [form, setForm] = useState({ name: me.name ?? "", hours_per_week: me.hours_per_week, email_reports: me.email_reports });
+  const emailStatus = useApi<{ enabled: boolean }>("/api/reports/email-status");
   const [saved, setSaved] = useState(false);
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +28,7 @@ export default function AccountPage() {
     e.preventDefault();
     setError(null);
     try {
-      await api("/auth/me", { method: "PATCH", json: { name: form.name || null, hours_per_week: form.hours_per_week } });
+      await api("/auth/me", { method: "PATCH", json: { name: form.name || null, hours_per_week: form.hours_per_week, email_reports: form.email_reports } });
       await refresh();
       setSaved(true);
     } catch (x) {
@@ -51,6 +52,15 @@ export default function AccountPage() {
             <label className="label" htmlFor="hours">Hours a week for preparation</label>
             <input id="hours" type="number" min={1} max={80} className="field w-32" value={form.hours_per_week} onChange={(e) => (setSaved(false), setForm({ ...form, hours_per_week: Number(e.target.value) }))} />
           </div>
+          <label className="flex items-start gap-2 text-[14.5px]">
+            <input type="checkbox" className="mt-1" checked={form.email_reports} onChange={(e) => (setSaved(false), setForm({ ...form, email_reports: e.target.checked }))} />
+            <span>
+              Email me my weekly report on Mondays
+              {emailStatus.data && !emailStatus.data.enabled && (
+                <span className="block text-[13px] text-ink-faint">Email isn&apos;t set up on this server yet, so nothing will be sent until it is.</span>
+              )}
+            </span>
+          </label>
           <div className="flex items-center gap-3">
             <button className="btn">Save profile</button>
             {saved && <span className="text-sm text-proof-4">Saved</span>}

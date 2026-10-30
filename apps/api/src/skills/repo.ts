@@ -1,6 +1,7 @@
+import { createHash } from "node:crypto";
 import { embed, cosine } from "../embeddings.js";
 import { query, vec } from "../db/pool.js";
-import { SKILLS } from "./data.js";
+import { PARENTS, SKILLS } from "./data.js";
 import { taxonomy } from "./taxonomy.js";
 
 /** Upserts the in-code taxonomy into Postgres. Safe to re-run. */
@@ -26,6 +27,23 @@ export async function seedSkills(log: (s: string) => void = () => {}) {
   }
   idCache = null;
   log(`seeded ${SKILLS.length} skills${vectors ? " with embeddings" : ""}`);
+}
+
+/** Content hash of the in-code taxonomy; a change triggers a re-seed on the next boot. */
+export const taxonomyVersion = () => createHash("sha256").update(JSON.stringify([SKILLS, PARENTS])).digest("hex").slice(0, 16);
+
+/**
+ * Seeds the taxonomy on boot when it changed (or the DB is empty). The `job_runs` claim makes sure
+ * only one instance seeds when several start together.
+ */
+export async function ensureSkillsSeeded(log: (s: string) => void = console.log) {
+  const name = `taxonomy:${taxonomyVersion()}`;
+  const n = (await query<{ n: number }>("SELECT count(*)::int AS n FROM skills"))[0]!.n;
+  const claimed = await query(
+    "INSERT INTO job_runs (name, last_run) VALUES ($1, now()) ON CONFLICT (name) DO NOTHING RETURNING name",
+    [name],
+  );
+  if (claimed.length || n === 0) await seedSkills(log);
 }
 
 let idCache: Promise<Map<string, number>> | null = null;

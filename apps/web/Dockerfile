@@ -16,4 +16,5 @@ ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
 COPY --from=build /app /app
 WORKDIR /app/apps/web
 EXPOSE 3000
-CMD ["npx", "next", "start", "-p", "3000"]
+# Hosts like Render inject PORT.
+CMD ["sh", "-c", "npx next start -p ${PORT:-3000}"]

@@ -30,28 +30,32 @@ Status as of 2026-10-30. ✅ done and tested · 🟡 partly done · ⬜ not star
 - ✅ Resume versioning + grounded tailoring + diff + print-to-PDF
 - ✅ Auth (scrypt + signed session cookie) and per-user isolation (tested)
 
-## Phase 4 — Standout features 🟡
-- ✅ Mock interview loop (text), follow-ups, weak skills written back to the plan
-- 🟡 Weekly progress report: page + Monday generation ✅. **Email ⬜** (needs an email provider)
+## Phase 4 — Standout features ✅
+- ✅ Mock interview loop, follow-ups, weak skills written back to the plan
+- ✅ Voice mock interviews (browser speech: questions read aloud, answers dictated)
+- ✅ Weekly progress report: page, Monday generation, opt-in email over any SMTP provider (tested against a real SMTP server)
 - ✅ Ghost-job flag with daily liveness re-check
 - ✅ Follow-up nudges (dashboard, tracker, weekly report)
 - ✅ GitHub import → verified/demonstrated evidence
-- ⬜ Voice mock interviews
 
 ## Phase 5 — Harden and launch 🟡
-- ✅ Eval gate + LLM-guard tests + e2e smoke; CI workflow written (**not yet run on GitHub**)
+- ✅ Eval gate + LLM-guard tests + e2e smoke (88 API tests)
 - ✅ Cost tracking per user per week (`/account`)
-- ✅ Rate limits, production secret check, data export, account deletion, privacy page
-- 🟡 Deploy: Dockerfiles + compose written, **not built locally (Docker isn't installed here)**. See `06-operations.md`
-- ⬜ Beta with 10–20 classmates, then outcome interviews
-- ⬜ Run the eval with Claude enabled (`npm run eval -- --llm`) once an API key is available
+- ✅ Rate limits (Postgres-backed, multi-instance), production secret check, data export, account deletion, privacy page
+- ✅ Docker: images built and the full e2e smoke test passes against `docker compose` (Colima)
+- ✅ Multi-instance safe: scheduler claims and taxonomy seeding coordinate through Postgres
+- ✅ Beta tooling: in-app feedback, `/admin` metrics (activation, evidence growth, interview rate tailored vs not, AI spend)
+- ✅ India coverage: 33 verified boards, 24 with India roles
+- 🟡 CI workflow written; runs once the repo is pushed to GitHub
+- 🟡 Render blueprint (`render.yaml`) written; deploying needs your Render account
+- ⬜ Claude live run (`npm run eval -- --llm`): needs `ANTHROPIC_API_KEY`
+- ⬜ Beta with 10–20 classmates, then outcome interviews (the tooling is ready)
 
-## Next steps, in order
-1. Add `ANTHROPIC_API_KEY` and run `npm run eval -- --llm`, compared with rules-only (96.5% P / 100% R today).
-2. Grow the eval set to 10 resumes × 50 JDs using real (consented, anonymized) resumes from the beta.
-3. Push to GitHub so CI runs; deploy (Neon + Railway/Fly + Vercel).
-4. Add more India company boards to `sources/boards.ts` (verify each token first) and an Adzuna key.
-5. Weekly email via Resend or SES; voice interviews.
+## What only you can do
+1. Add `ANTHROPIC_API_KEY` to `.env`, then run `npm run eval -- --llm` and compare with rules-only (96.5% P / 100% R).
+2. `gh auth login`, then push (CI runs automatically).
+3. Deploy the Render blueprint (steps in `06-operations.md`).
+4. Invite classmates; read `/admin` weekly. Grow the eval set with consented, anonymized resumes.
 
 ## Risks
 | Risk | Mitigation (in place) |

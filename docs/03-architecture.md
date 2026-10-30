@@ -13,8 +13,9 @@
 | Embeddings | `Xenova/bge-small-en-v1.5` via transformers.js (local, 384-d) | `EMBEDDINGS=off` falls back to lexical similarity |
 | Parsing | `unpdf` (PDF), `mammoth` (DOCX) | |
 | Jobs | Greenhouse, Lever, Ashby public board APIs; Adzuna (optional key); Arbeitnow | 6h cache, 10-min negative cache, 4 concurrent requests max |
-| Scheduling | In-process hourly tick (`src/scheduler.ts`) | Daily liveness and ghost check, Monday weekly reports |
-| Tests | Vitest + Supertest against a real test DB; Playwright-core e2e smoke | 81 API tests, including an eval gate and LLM-guard tests |
+| Scheduling | Hourly tick on every instance; each job claimed atomically in `job_runs` | Daily liveness and ghost check, Monday weekly reports and emails, taxonomy seeding on boot |
+| Email | nodemailer over any SMTP provider | Opt-in weekly report |
+| Tests | Vitest + Supertest against a real test DB; Playwright-core e2e smoke | 88 API tests, including an eval gate, LLM-guard tests and a real SMTP server |
 
 ## Design principle: rules first, Claude second, guards always
 Every LLM feature has a deterministic path that works with **no API key**:
@@ -61,6 +62,7 @@ Migrations live in `apps/api/migrations/001…007`:
 - **005:** extractor version, so cached requirements refresh when the extractor improves
 - **006 insights:** interview_sessions/attempts, weekly_reports, users.github_username, jobs.delisted_at
 - **007 ops:** llm_usage
+- **008 launch:** email opt-in, feedback, rate_limits (shared counters), job_runs (scheduler claims), admin flag
 
 LangGraph checkpoint tables are created by `PostgresSaver.setup()`.
 
@@ -73,7 +75,8 @@ LangGraph checkpoint tables are created by `PostgresSaver.setup()`.
           careers/prepare (POST → runId) · runs, runs/:id, runs/:id/events (SSE), runs/:id/resume
           market-maps (GET, latest, :id, POST :id/plan) · plans/active, plans/:id · plan-tasks/:id (PATCH)
           questions · interviews (POST, GET, :id, :id/answer) · reports, reports/weekly
-          applications (CRUD) · github/import, github/evidence
+          applications (CRUD) · github/import, github/evidence · reports/weekly/email, reports/email-status
+          feedback (POST) · admin/metrics (admins only)
 ```
 
 ## Repo layout
@@ -95,4 +98,4 @@ careerpilot/
 - **Privacy:** resumes stay in Postgres only. JSON export and cascading delete are available. Resume text is never logged. Job sources receive only role and location.
 - **Cost:** every Claude call is logged to `llm_usage` with its USD cost and attributed to the user via AsyncLocalStorage (`/auth/me/usage`). JD extraction is cached by content hash and extractor version.
 - **Safety rails:** rate limits on auth and expensive endpoints, the app refuses to boot in production with a weak `SESSION_SECRET`, and users are isolated on every query (tested).
-- **Scaling notes:** the scheduler and rate limiter are in-process. Move them to a worker and Redis if you run more than one API instance.
+- **Scaling:** rate-limit counters and scheduler claims live in Postgres, so any number of API instances can run. Agent runs execute in the instance that started them; after a restart, an instance resumes `running` runs from their checkpoints.

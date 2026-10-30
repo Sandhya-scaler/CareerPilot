@@ -7,6 +7,7 @@ import { requestContext } from "./context.js";
 import { one, query } from "./db/pool.js";
 import { HttpError, parse } from "./http.js";
 import { rateLimit } from "./ratelimit.js";
+import { isAdmin } from "./services/metrics.js";
 
 const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number) => Promise<Buffer>;
 const COOKIE = "cp_session";
@@ -111,12 +112,12 @@ authRouter.post("/logout", (_req, res) => {
 });
 
 authRouter.get("/me", requireUser, async (req, res) => {
-  const user = await one(
-    "SELECT id, email, name, target_role, location, hours_per_week FROM users WHERE id = $1",
+  const user = await one<Record<string, unknown>>(
+    "SELECT id, email, name, target_role, location, hours_per_week, email_reports, is_admin FROM users WHERE id = $1",
     [userId(req)],
   );
   if (!user) throw new HttpError(401, "account no longer exists");
-  res.json(user);
+  res.json({ ...user, is_admin: await isAdmin(userId(req)) });
 });
 
 const Profile = z.object({
@@ -124,6 +125,7 @@ const Profile = z.object({
   target_role: z.string().max(120).nullable().optional(),
   location: z.string().max(120).nullable().optional(),
   hours_per_week: z.number().int().min(1).max(80).optional(),
+  email_reports: z.boolean().optional(),
 });
 
 authRouter.patch("/me", requireUser, async (req, res) => {
@@ -133,9 +135,11 @@ authRouter.patch("/me", requireUser, async (req, res) => {
        name = CASE WHEN $2::boolean THEN $3 ELSE name END,
        target_role = CASE WHEN $4::boolean THEN $5 ELSE target_role END,
        location = CASE WHEN $6::boolean THEN $7 ELSE location END,
-       hours_per_week = COALESCE($8, hours_per_week)
-     WHERE id = $1 RETURNING id, email, name, target_role, location, hours_per_week`,
-    [userId(req), "name" in p, p.name ?? null, "target_role" in p, p.target_role ?? null, "location" in p, p.location ?? null, p.hours_per_week ?? null],
+       hours_per_week = COALESCE($8, hours_per_week),
+       email_reports = COALESCE($9, email_reports)
+     WHERE id = $1 RETURNING id, email, name, target_role, location, hours_per_week, email_reports, is_admin`,
+    [userId(req), "name" in p, p.name ?? null, "target_role" in p, p.target_role ?? null, "location" in p, p.location ?? null,
+      p.hours_per_week ?? null, p.email_reports ?? null],
   );
   res.json(user);
 });

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ProofLadder } from "@/components/ProofLadder";
 import { ErrorNote, Loading, PageHeader, Quote, Section } from "@/components/ui";
-import { pct, useApi } from "@/lib/api";
+import { api, errorText, pct, useApi } from "@/lib/api";
 import type { Tier } from "@/lib/types";
 
 interface Report {
@@ -27,6 +27,8 @@ export default function ReportPage() {
   const [week, setWeek] = useState<string | null>(null);
   const r = useApi<Report>(`/api/reports/weekly${week ? `?week=${week}` : ""}`);
   const list = useApi<{ week_start: string; headline: string }[]>("/api/reports");
+  const email = useApi<{ enabled: boolean }>("/api/reports/email-status");
+  const [sent, setSent] = useState<string | null>(null);
   if (r.loading && !r.data) return <Loading />;
   if (r.error || !r.data) return <ErrorNote>{r.error ?? "No report"}</ErrorNote>;
   const d = r.data;
@@ -34,7 +36,27 @@ export default function ReportPage() {
 
   return (
     <>
-      <PageHeader title={`Week of ${fmt(d.weekStart)} to ${fmt(end)}`} intro={d.headline} />
+      <PageHeader
+        title={`Week of ${fmt(d.weekStart)} to ${fmt(end)}`}
+        intro={d.headline}
+        actions={
+          email.data?.enabled && !week ? (
+            <button
+              className="btn btn-quiet"
+              onClick={async () => {
+                try {
+                  await api("/api/reports/weekly/email", { method: "POST" });
+                  setSent("Sent to your email.");
+                } catch (e) {
+                  setSent(errorText(e));
+                }
+              }}
+            >
+              {sent ?? "Email me this report"}
+            </button>
+          ) : undefined
+        }
+      />
 
       <div className="flex flex-wrap gap-x-12 gap-y-4">
         <div>

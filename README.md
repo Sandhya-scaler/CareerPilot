@@ -8,11 +8,11 @@ CareerPilot reads current job descriptions for a role and checks every requireme
 - **Market map:** reads 10–50 current postings for your role (public company job-board APIs, or JDs you paste from anywhere) and shows what's asked for, how often, and how often it's a must-have.
 - **Evidence-linked matching:** every requirement sits next to your strongest proof, graded on a 4-step *proof ladder*: claimed → applied → demonstrated → verified.
 - **Weekly plan:** gaps ranked by demand × gap × learnability and scheduled into your hours. Finishing a build task with proof (a link or a result) adds evidence and raises your readiness.
-- **Practice:** questions from your gaps, from real JD sentences and from your own projects, each with a rubric. Mock interviews ask follow-ups on weak answers and add practice tasks to your plan.
+- **Practice:** questions from your gaps, from real JD sentences and from your own projects, each with a rubric. Mock interviews (typed or spoken) ask follow-ups on weak answers and add practice tasks to your plan.
 - **Applications:** a kanban tracker with follow-up reminders and drafts, plus a ghost-job flag for postings that vanished from the company board or look stale.
 - **Resume versions:** tailored per job, with a line diff, a "why each change" log and print-to-PDF.
 - **GitHub import:** languages GitHub measures in your public repos count as verified evidence.
-- **Weekly report:** what you did, new evidence, readiness change, what's next.
+- **Weekly report:** what you did, new evidence, readiness change, what's next, optionally emailed every Monday.
 
 Everything works **without an API key** (rules, a curated question bank, keyword grading). Add `ANTHROPIC_API_KEY` for Claude-powered extraction, plans, questions, rewording and grading.
 
@@ -26,6 +26,8 @@ npm run seed
 npm run dev:api                 # :4000
 npm run dev:web                 # :3000 → create an account → "Prepare for a role"
 ```
+Or with Docker: `SESSION_SECRET=$(openssl rand -hex 32) docker compose up --build` → http://localhost:3000.
+
 No database handy? Try the offline CLI: `npm run cli -w apps/api -- match path/to/resume.pdf path/to/jd.txt`.
 
 ## Quality
@@ -33,8 +35,8 @@ No database handy? Try the offline CLI: `npm run cli -w apps/api -- match path/t
 |---|---|
 | JD requirement extraction (8 hand-labeled JDs, rules only) | precision 96.5%, recall 100%, must/nice 96.3% |
 | Resume evidence (4 hand-labeled resumes, rules only) | precision 98.8%, recall 100%, tier exact 97.5% |
-| API tests | 81 passing: extraction, scoring, grounding, HITL pipeline, interviews, isolation between users, LLM guards with a mocked model that fabricates |
-| End to end | `npm run e2e` drives the golden path in Chrome as a new user |
+| API tests | 88 passing: extraction, scoring, grounding, HITL pipeline, interviews, isolation between users, LLM guards with a mocked model that fabricates, email over real SMTP, multi-instance claims |
+| End to end | `npm run e2e` drives the golden path in Chrome as a new user; passes against both the dev servers and `docker compose` |
 
 These are small, synthetic eval sets. Grow them with real (consented) resumes before trusting the numbers broadly.
 

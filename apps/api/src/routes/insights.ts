@@ -6,7 +6,9 @@ import { rateLimit } from "../ratelimit.js";
 import { checkLiveness } from "../services/ghost.js";
 import { githubEvidence, importGithub } from "../services/github.js";
 import { answerInterview, getInterview, interviewAttempts, listInterviews, startInterview } from "../services/interviews.js";
+import { emailEnabled, sendWeeklyReport } from "../services/email.js";
 import { generateWeeklyReport, listReports, weekStartOf } from "../services/reports.js";
+import { HttpError } from "../http.js";
 
 export const insightsRouter = Router();
 
@@ -41,6 +43,19 @@ insightsRouter.get("/reports", async (req, res) => {
 insightsRouter.get("/reports/weekly", async (req, res) => {
   const q = parse(z.object({ week: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }), req.query);
   res.json(await generateWeeklyReport(userId(req), q.week ? weekStartOf(new Date(q.week)) : weekStartOf()));
+});
+
+/** Sends this week's report to the signed-in user now, to check how the email looks. */
+insightsRouter.post("/reports/weekly/email", rateLimit({ name: "email", windowMs: 3600_000, max: 5 }), async (req, res) => {
+  if (!emailEnabled()) throw new HttpError(503, "email isn't configured on this server (set SMTP_URL)");
+  const week = weekStartOf();
+  await generateWeeklyReport(userId(req), week);
+  await sendWeeklyReport(userId(req), week, { force: true });
+  res.json({ sent: true });
+});
+
+insightsRouter.get("/reports/email-status", (_req, res) => {
+  res.json({ enabled: emailEnabled() });
 });
 
 // ---- GitHub ---------------------------------------------------------------------------------------

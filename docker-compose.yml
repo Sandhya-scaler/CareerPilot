@@ -24,12 +24,12 @@ services:
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       WEB_ORIGIN: http://localhost:3000
     volumes: [models:/app/apps/api/.cache]
-    ports: ["4000:4000"]
+    ports: ["${API_HOST_PORT:-4000}:4000"]
 
   web:
     build: { context: ., dockerfile: apps/web/Dockerfile, args: { API_URL: "http://api:4000" } }
     depends_on: [api]
-    ports: ["3000:3000"]
+    ports: ["${WEB_HOST_PORT:-3000}:3000"]
 
 volumes:
   pgdata:

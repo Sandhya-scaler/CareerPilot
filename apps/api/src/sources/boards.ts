@@ -8,7 +8,8 @@ export interface Board {
 }
 
 /**
- * Seed list of public ATS boards, each verified to respond (2026-10-30). Users can add their own
+ * Seed list of public ATS boards, each verified to respond and (for India-region boards) to list
+ * India roles (2026-10-30). Users can add their own
  * target companies per research run. Re-verify periodically: companies switch ATS vendors.
  */
 export const SEED_BOARDS: Board[] = [
@@ -26,6 +27,15 @@ export const SEED_BOARDS: Board[] = [
   { ats: "greenhouse", token: "anthropic", company: "Anthropic", regions: ["global"] },
   { ats: "greenhouse", token: "scaleai", company: "Scale AI", regions: ["global"] },
   { ats: "greenhouse", token: "waymo", company: "Waymo", regions: ["global"] },
+  { ats: "greenhouse", token: "inmobi", company: "InMobi", regions: ["india"] },
+  { ats: "greenhouse", token: "sigmoid", company: "Sigmoid", regions: ["india"] },
+  { ats: "greenhouse", token: "mongodb", company: "MongoDB", regions: ["india", "global"] },
+  { ats: "greenhouse", token: "okta", company: "Okta", regions: ["india", "global"] },
+  { ats: "greenhouse", token: "zscaler", company: "Zscaler", regions: ["india", "global"] },
+  { ats: "greenhouse", token: "gitlab", company: "GitLab", regions: ["india", "global"] },
+  { ats: "greenhouse", token: "elastic", company: "Elastic", regions: ["india", "global"] },
+  { ats: "greenhouse", token: "coinbase", company: "Coinbase", regions: ["india", "global"] },
+  { ats: "greenhouse", token: "twilio", company: "Twilio", regions: ["india", "global"] },
   { ats: "lever", token: "mindtickle", company: "Mindtickle", regions: ["india"] },
   { ats: "lever", token: "cred", company: "CRED", regions: ["india"] },
   { ats: "lever", token: "meesho", company: "Meesho", regions: ["india"] },
