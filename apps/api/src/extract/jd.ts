@@ -4,6 +4,9 @@ import { taxonomy } from "../skills/taxonomy.js";
 import type { RequirementDraft, RequirementKind } from "../types.js";
 import { BULLET_RE, cleanText, logicalLines, stripBullet } from "./text.js";
 
+/** Bump when extraction output changes so cached requirements are recomputed. */
+export const EXTRACTOR_VERSION = 2;
+
 type JdSection = "must" | "nice" | "resp" | "skip" | "intro";
 
 const HEADINGS: [JdSection, RegExp][] = [
@@ -26,11 +29,14 @@ function headingOf(line: string): JdSection | null {
 const NICE_CUE = /(nice[- ]to[- ]have|preferred|is a (big )?plus|\ba plus\b|bonus|good[- ]to[- ]have|ideally|desirable|familiarity with|exposure to|optional|added advantage|an advantage|not required|would be great|is helpful|helpful but|bonus points)/i;
 const YEARS_RE = /(\d{1,2})\s*\+?\s*(?:-|to|–)?\s*(?:\d{1,2}\s*)?\+?\s*(?:years?|yrs?)/i;
 
-/** Splits a line into sentences without breaking "Node.js", "e.g.", "3.5". */
-function sentences(line: string): string[] {
+const ABBREV = /\b(e\.g|i\.e|etc|vs|incl|approx|esp|resp|min|max|yrs?|no|Sr|Jr|Dr|Mr|Ms|Inc|Ltd|Pvt|Co)\.(?=\s)/gi;
+
+/** Splits a line into sentences without breaking "Node.js", "e.g. LoRA", "3.5". */
+export function sentences(line: string): string[] {
   return line
+    .replace(ABBREV, (m) => `${m.slice(0, -1)}\u0000`)
     .split(/(?<=[.!?])\s+(?=[A-Z(])/)
-    .map((s) => s.trim())
+    .map((s) => s.replace(/\u0000/g, ".").trim())
     .filter(Boolean);
 }
 

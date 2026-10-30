@@ -51,10 +51,10 @@ describe("matchRequirements", () => {
     expect(r.items.find((i) => i.skill === "Communication")?.scored).toBe(false);
   });
 
-  it("explains each item with the linked evidence", () => {
+  it("links each item to its evidence and explains the next step", () => {
     const r = matchRequirements([req("OpenCV")], [ev("Built lane detector with OpenCV", 2, ["OpenCV"])], taxonomy);
-    expect(r.items[0]!.explanation).toContain("Built lane detector with OpenCV");
-    expect(r.items[0]!.explanation).toContain("measurable outcome");
+    expect(r.items[0]!.evidence.item?.text).toBe("Built lane detector with OpenCV");
+    expect(r.items[0]!.explanation).toMatch(/^Applied\. .*measurable outcome/);
   });
 
   it("is 0 with no requirements", () => {

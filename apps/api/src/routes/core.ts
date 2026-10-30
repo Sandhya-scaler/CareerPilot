@@ -7,7 +7,9 @@ import { HttpError, parse, Uuid } from "../http.js";
 import { confirmEvidence } from "../services/evidence.js";
 import { getJob, listUserJobs, removeUserJob, saveJobForUser, upsertJob } from "../services/jobs.js";
 import { getReport, latestReportForJob, matchJob } from "../services/match.js";
+import { createApplication, deleteApplication, getApplication, listApplications, updateApplication } from "../services/applications.js";
 import { createResume, deleteResume, getVersion, listResumes } from "../services/resumes.js";
+import { tailorVersion, versionDiff, versionsForJob } from "../services/tailoring.js";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 } });
 
@@ -102,6 +104,56 @@ coreRouter.post("/jobs/:id/save", async (req, res) => {
 
 coreRouter.delete("/jobs/:id", async (req, res) => {
   await removeUserJob(userId(req), parse(Uuid, req.params.id));
+  res.status(204).end();
+});
+
+// ---- Tailoring -----------------------------------------------------------------------------------
+
+coreRouter.post("/resume-versions/:id/tailor", async (req, res) => {
+  const body = parse(z.object({ jobId: Uuid }), req.body);
+  res.status(201).json(await tailorVersion(userId(req), parse(Uuid, req.params.id), body.jobId));
+});
+
+coreRouter.get("/resume-versions/:id/diff", async (req, res) => {
+  res.json(await versionDiff(userId(req), parse(Uuid, req.params.id)));
+});
+
+coreRouter.get("/jobs/:id/versions", async (req, res) => {
+  res.json(await versionsForJob(userId(req), parse(Uuid, req.params.id)));
+});
+
+// ---- Applications --------------------------------------------------------------------------------
+
+const AppStatus = z.enum(["saved", "applied", "oa", "interview", "offer", "rejected", "withdrawn"]);
+
+coreRouter.get("/applications", async (req, res) => {
+  res.json(await listApplications(userId(req)));
+});
+
+coreRouter.post("/applications", async (req, res) => {
+  const body = parse(z.object({ jobId: Uuid, status: AppStatus.optional(), resumeVersionId: Uuid.nullable().optional(), notes: z.string().max(5000).optional() }), req.body);
+  res.status(201).json(await createApplication(userId(req), body));
+});
+
+coreRouter.get("/applications/:id", async (req, res) => {
+  res.json(await getApplication(userId(req), parse(Uuid, req.params.id)));
+});
+
+coreRouter.patch("/applications/:id", async (req, res) => {
+  const body = parse(
+    z.object({
+      status: AppStatus.optional(),
+      notes: z.string().max(5000).optional(),
+      resumeVersionId: Uuid.nullable().optional(),
+      nextFollowupAt: z.string().datetime().nullable().optional(),
+    }),
+    req.body,
+  );
+  res.json(await updateApplication(userId(req), parse(Uuid, req.params.id), body));
+});
+
+coreRouter.delete("/applications/:id", async (req, res) => {
+  await deleteApplication(userId(req), parse(Uuid, req.params.id));
   res.status(204).end();
 });
 

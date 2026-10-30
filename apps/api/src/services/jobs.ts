@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { embedOne } from "../embeddings.js";
 import { one, query, tx, vec } from "../db/pool.js";
-import { extractRequirements, guessTitle } from "../extract/jd.js";
+import { EXTRACTOR_VERSION, extractRequirements, guessTitle } from "../extract/jd.js";
 import { cleanText } from "../extract/text.js";
 import { notFound } from "../http.js";
 import { skillId } from "../skills/repo.js";
@@ -32,11 +32,11 @@ export async function upsertJob(input: JobInput): Promise<{ id: string; created:
   const sourceId = input.sourceId ?? hash.slice(0, 24);
   const title = input.title?.trim() || guessTitle(description);
 
-  const existing = await one<{ id: string; content_hash: string }>(
-    "SELECT id, content_hash FROM jobs WHERE source = $1 AND source_id = $2",
+  const existing = await one<{ id: string; content_hash: string; extractor_version: number }>(
+    "SELECT id, content_hash, extractor_version FROM jobs WHERE source = $1 AND source_id = $2",
     [input.source, sourceId],
   );
-  if (existing && existing.content_hash === hash) {
+  if (existing && existing.content_hash === hash && existing.extractor_version === EXTRACTOR_VERSION) {
     await query("UPDATE jobs SET last_seen_at = now() WHERE id = $1", [existing.id]);
     return { id: existing.id, created: false };
   }
@@ -46,16 +46,16 @@ export async function upsertJob(input: JobInput): Promise<{ id: string; created:
 
   const id = await tx(async (c) => {
     const { rows } = await c.query<{ id: string }>(
-      `INSERT INTO jobs (source, source_id, url, company, title, location, remote, posted_at, description, content_hash, embedding)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      `INSERT INTO jobs (source, source_id, url, company, title, location, remote, posted_at, description, content_hash, embedding, extractor_version)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        ON CONFLICT (source, source_id) DO UPDATE SET
          url = EXCLUDED.url, company = EXCLUDED.company, title = EXCLUDED.title, location = EXCLUDED.location,
          remote = EXCLUDED.remote, posted_at = COALESCE(EXCLUDED.posted_at, jobs.posted_at),
          description = EXCLUDED.description, content_hash = EXCLUDED.content_hash,
-         embedding = EXCLUDED.embedding, last_seen_at = now()
+         embedding = EXCLUDED.embedding, extractor_version = EXCLUDED.extractor_version, last_seen_at = now()
        RETURNING id`,
       [input.source, sourceId, input.url ?? null, input.company ?? null, title, input.location ?? null,
-        input.remote ?? null, input.postedAt ?? null, description, hash, vec(embedding)],
+        input.remote ?? null, input.postedAt ?? null, description, hash, vec(embedding), EXTRACTOR_VERSION],
     );
     const jobId = rows[0]!.id;
     await c.query("DELETE FROM job_requirements WHERE job_id = $1", [jobId]);
@@ -74,8 +74,8 @@ async function requirementsFor(hash: string, description: string): Promise<Requi
   const cached = await query<RequirementDraft>(
     `SELECT s.canonical_name AS skill, r.kind, r.years_min AS "yearsMin", r.source_sentence AS "sourceSentence"
      FROM job_requirements r JOIN skills s ON s.id = r.skill_id
-     WHERE r.job_id = (SELECT id FROM jobs WHERE content_hash = $1 ORDER BY fetched_at LIMIT 1)`,
-    [hash],
+     WHERE r.job_id = (SELECT id FROM jobs WHERE content_hash = $1 AND extractor_version = $2 ORDER BY fetched_at LIMIT 1)`,
+    [hash, EXTRACTOR_VERSION],
   );
   if (cached.length) return cached;
   return (await extractRequirements(description)).requirements;

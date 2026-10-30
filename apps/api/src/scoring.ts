@@ -96,14 +96,15 @@ export function explain(item: Omit<MatchItem, "explanation">): string {
   const e = item.evidence;
   const years = item.requirement.yearsMin ? ` The posting asks for ${item.requirement.yearsMin}+ years.` : "";
   if (!item.scored) return "Soft skill. Shown for context, not scored; show it in interviews and project write-ups.";
+  // The evidence line itself is shown next to the explanation, so explanations don't repeat it.
   if (e.via === "direct" && e.item) {
-    return `${cap(TIER_LABEL[e.item.tier])} (tier ${e.item.tier}): "${truncate(e.item.text)}".${nextStep(e.item.tier)}${years}`;
+    return `${cap(TIER_LABEL[e.item.tier])}.${nextStep(e.item.tier)}${years}`;
   }
   if (e.via === "implied" && e.item) {
-    return `Shown through ${e.viaSkill} (${TIER_LABEL[e.item.tier]}): "${truncate(e.item.text)}".${years}`;
+    return `Shown through your ${e.viaSkill} work (${TIER_LABEL[e.item.tier]}).${years}`;
   }
   if (e.via === "adjacent" && e.item) {
-    return `Not shown directly. Partial credit from related ${e.viaSkill}: "${truncate(e.item.text)}". A small ${item.skill} project would close this.${years}`;
+    return `Partial credit from related ${e.viaSkill}. A small ${item.skill} project would close this.${years}`;
   }
   return `No evidence in your profile.${item.kind === "must" ? " This is a must-have." : " Nice-to-have."}${years}`;
 }
@@ -115,7 +116,6 @@ function nextStep(tier: Tier): string {
 }
 
 const cap = (s: string) => s[0]!.toUpperCase() + s.slice(1);
-const truncate = (s: string, n = 110) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
 export function matchRequirements<E extends EvidenceRef>(requirements: Requirement[], evidence: E[], tax: Taxonomy): MatchResult<E> {
   const best = bestBySkill(evidence);

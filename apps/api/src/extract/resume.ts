@@ -30,14 +30,14 @@ const DATE_RE = /\b(19|20)\d{2}\b|\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oc
  * A "title" line inside experience/projects heads a group of bullets: short, not a bullet,
  * not a sentence (often has dates, "|" or an org name).
  */
-function isTitleLine(line: string): boolean {
+export function isTitleLine(line: string): boolean {
   if (BULLET_RE.test(line)) return false;
   if (line.length > 110) return false;
   if (/[.!?]$/.test(line) && !DATE_RE.test(line)) return false;
   return DATE_RE.test(line) || /[|–—@]/.test(line) || line.split(" ").length <= 9;
 }
 
-function groupByTitle(lines: string[]): { title: string | null; lines: string[] }[] {
+export function groupByTitle(lines: string[]): { title: string | null; lines: string[] }[] {
   const groups: { title: string | null; lines: string[] }[] = [];
   for (const line of lines) {
     if (isTitleLine(line) || groups.length === 0) groups.push({ title: isTitleLine(line) ? line : null, lines: [line] });

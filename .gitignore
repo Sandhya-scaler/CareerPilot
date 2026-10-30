@@ -8,3 +8,5 @@ uploads/
 .DS_Store
 apps/api/.cache/
 evals/results/
+apps/web/next-env.d.ts
+*.tsbuildinfo

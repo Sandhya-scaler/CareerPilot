@@ -57,7 +57,7 @@ const EVIDENCE_SELECT = `
  * to a resume (GitHub repos, passed assessments, completed plan tasks, manual entries).
  */
 export async function evidenceForUser(userId: string, versionId?: string | null): Promise<EvidenceRow[]> {
-  const version = versionId ?? (await latestVersionId(userId));
+  const version = versionId ? await baseVersionOf(versionId) : await latestVersionId(userId);
   return query<EvidenceRow>(
     `${EVIDENCE_SELECT}
      WHERE e.user_id = $1 AND (e.resume_version_id = $2 OR e.resume_version_id IS NULL)
@@ -71,6 +71,21 @@ export async function evidenceForVersion(userId: string, versionId: string): Pro
     `${EVIDENCE_SELECT} WHERE e.user_id = $1 AND e.resume_version_id = $2 GROUP BY e.id ORDER BY e.created_at, e.id`,
     [userId, versionId],
   );
+}
+
+/** Tailored versions share their base version's evidence (tailoring changes wording, not facts). */
+export async function baseVersionOf(versionId: string): Promise<string> {
+  const rows = await query<{ id: string }>(
+    `WITH RECURSIVE chain AS (
+       SELECT id, parent_version_id, job_id, 0 AS depth FROM resume_versions WHERE id = $1
+       UNION ALL
+       SELECT v.id, v.parent_version_id, v.job_id, c.depth + 1 FROM resume_versions v JOIN chain c ON v.id = c.parent_version_id
+       WHERE c.job_id IS NOT NULL AND c.depth < 20
+     )
+     SELECT id FROM chain WHERE job_id IS NULL ORDER BY depth LIMIT 1`,
+    [versionId],
+  );
+  return rows[0]?.id ?? versionId;
 }
 
 /** Newest *base* (non-tailored) resume version. */

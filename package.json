@@ -1,7 +1,9 @@
 {
   "name": "careerpilot",
   "private": true,
-  "workspaces": ["apps/*"],
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
     "dev:api": "npm run dev -w apps/api",
     "dev:web": "npm run dev -w apps/web",
@@ -10,5 +12,8 @@
     "test": "npm test -w apps/api",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "eval": "npm run eval -w apps/api"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.64.1"
   }
 }

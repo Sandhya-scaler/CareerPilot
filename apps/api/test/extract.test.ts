@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
-import { alternativeSkills, extractRequirementsRules, guessTitle } from "../src/extract/jd.js";
+import { alternativeSkills, extractRequirementsRules, guessTitle, sentences } from "../src/extract/jd.js";
 import { parseResumeRules, sectionOf } from "../src/extract/resume.js";
 import { findLinks, findMetrics, logicalLines } from "../src/extract/text.js";
 import { taxonomy } from "../src/skills/taxonomy.js";
@@ -107,6 +107,13 @@ describe("JD extractor", () => {
     const reqs = extractRequirementsRules("We need 3+ years of Python. Familiarity with Docker is a plus.");
     expect(reqs.find((r) => r.skill === "Python")).toMatchObject({ kind: "must", yearsMin: 3 });
     expect(reqs.find((r) => r.skill === "Docker")?.kind).toBe("nice");
+  });
+
+  it("doesn't split sentences at abbreviations (live-run regression)", () => {
+    expect(sentences("Fine-tuning of models using PEFT (e.g. LoRA, QLoRA etc.), and Knowledge Distillation. Strong Python.")).toEqual([
+      "Fine-tuning of models using PEFT (e.g. LoRA, QLoRA etc.), and Knowledge Distillation.",
+      "Strong Python.",
+    ]);
   });
 
   it("guesses a title", () => {

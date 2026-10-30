@@ -1,0 +1,118 @@
+@import "tailwindcss";
+
+/*
+ * CareerPilot tokens. Source text (JD sentences, resume lines) is set in the serif; interface text
+ * in the sans. The proof ramp (tier 1→4) is the only saturated color family; mulberry marks a
+ * missing must-have; indigo is for actions.
+ */
+@theme {
+  --font-sans: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
+
+  --color-ink: #1c2733;
+  --color-ink-soft: #4a5866;
+  --color-ink-faint: #7d8a96;
+  --color-paper: #f2f4f1;
+  --color-surface: #ffffff;
+  --color-rule: #d9ded8;
+  --color-rule-strong: #b9c1b8;
+
+  --color-proof-1: #cfe3dd;
+  --color-proof-2: #8dbfb2;
+  --color-proof-3: #2e7d6f;
+  --color-proof-4: #0f4c43;
+  --color-proof-wash: #e6f0ec;
+
+  --color-gap: #a3245b;
+  --color-gap-wash: #f6e6ed;
+
+  --color-action: #2c3d8f;
+  --color-action-hover: #223073;
+  --color-action-wash: #e8ebf7;
+
+  --radius-ui: 6px;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.55;
+    font-feature-settings: "kern", "liga";
+  }
+  h1, h2, h3 {
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-action);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .source {
+    font-family: var(--font-serif);
+    font-size: 15.5px;
+    line-height: 1.6;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: var(--radius-ui);
+    padding: 0.5rem 0.9rem;
+    font-weight: 500;
+    font-size: 14px;
+    background: var(--color-action);
+    color: white;
+    transition: background-color 120ms;
+  }
+  .btn:hover:not(:disabled) {
+    background: var(--color-action-hover);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .btn-quiet {
+    background: transparent;
+    color: var(--color-action);
+    box-shadow: inset 0 0 0 1px var(--color-rule-strong);
+  }
+  .btn-quiet:hover:not(:disabled) {
+    background: var(--color-action-wash);
+  }
+  .field {
+    width: 100%;
+    border-radius: var(--radius-ui);
+    border: 1px solid var(--color-rule-strong);
+    background: var(--color-surface);
+    padding: 0.5rem 0.65rem;
+    font-size: 15px;
+  }
+  .field:focus {
+    outline: 2px solid var(--color-action);
+    outline-offset: -1px;
+  }
+  .label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-ink-soft);
+    margin-bottom: 0.3rem;
+  }
+}
