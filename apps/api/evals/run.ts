@@ -9,6 +9,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { extractRequirements, extractRequirementsRules } from "../src/extract/jd.js";
 import { parseResume, parseResumeRules } from "../src/extract/resume.js";
+import { config } from "../src/config.js";
+import { llmProvider } from "../src/llm.js";
 import { bestBySkill } from "../src/scoring.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -82,7 +84,8 @@ export async function runEval(opts = { useLlm: false, verbose: false }): Promise
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const r = await runEval({ useLlm, verbose });
-  console.log(`\nMode: ${useLlm ? "rules + Claude" : "rules only"}`);
+  const model = llmProvider() === "anthropic" ? config.CLAUDE_EXTRACTION_MODEL : config.LLM_EXTRACTION_MODEL ?? config.LLM_MODEL;
+  console.log(`\nMode: ${useLlm ? `rules + ${llmProvider() === "none" ? "no model configured (rules only)" : model}` : "rules only"}`);
   console.log(`JD requirements (${r.jd.docs} docs):  precision ${pct(r.jd.precision)}  recall ${pct(r.jd.recall)}  must/nice accuracy ${pct(r.jd.kindAccuracy)}`);
   console.log(`Resume evidence (${r.resume.docs} docs): precision ${pct(r.resume.precision)}  recall ${pct(r.resume.recall)}  tier ±1 ${pct(r.resume.tierWithin1)}  tier exact ${pct(r.resume.tierExact)}`);
   await mkdir(path.join(here, "results"), { recursive: true });

@@ -7,7 +7,7 @@ import { config } from "./config.js";
 import { pool } from "./db/pool.js";
 import { embeddingsEnabled } from "./embeddings.js";
 import { errorHandler, HttpError } from "./http.js";
-import { llmEnabled } from "./llm.js";
+import { llmProvider } from "./llm.js";
 import { adminRouter } from "./routes/admin.js";
 import { agentsRouter } from "./routes/agents.js";
 import { coreRouter } from "./routes/core.js";
@@ -23,7 +23,7 @@ export function createApp() {
 
   app.get("/health", async (_req, res) => {
     await pool.query("SELECT 1");
-    res.json({ ok: true, db: true, llm: llmEnabled(), embeddings: embeddingsEnabled() });
+    res.json({ ok: true, db: true, llm: llmProvider(), embeddings: embeddingsEnabled() });
   });
 
   app.use("/auth", authRouter);

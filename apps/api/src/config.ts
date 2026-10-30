@@ -5,6 +5,16 @@ const Env = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
   CLAUDE_REASONING_MODEL: z.string().default("claude-opus-5-5"),
   CLAUDE_EXTRACTION_MODEL: z.string().default("claude-haiku-5-5"),
+  // Free alternative: any OpenAI-compatible endpoint (used when ANTHROPIC_API_KEY is unset).
+  //   Gemini (free tier): LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+  //                       LLM_API_KEY=<from aistudio.google.com>  LLM_MODEL=gemini-3.8-flash
+  //   Ollama (local):     LLM_BASE_URL=http://localhost:11434/v1  LLM_MODEL=qwen2.5:3b
+  //   Groq (free tier):   LLM_BASE_URL=https://api.groq.com/openai/v1  LLM_API_KEY=...  LLM_MODEL=<see console.groq.com>
+  LLM_BASE_URL: z.string().url().optional(),
+  LLM_API_KEY: z.string().optional(),
+  LLM_MODEL: z.string().optional(),
+  LLM_EXTRACTION_MODEL: z.string().optional(),
+  LLM_TIMEOUT_MS: z.coerce.number().default(180_000),
   EMBEDDINGS: z.enum(["local", "off"]).default("local"),
   ADZUNA_APP_ID: z.string().optional(),
   ADZUNA_APP_KEY: z.string().optional(),

@@ -26,7 +26,8 @@ CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" npm r
 |---|---|---|
 | `DATABASE_URL` | yes | Postgres with the `vector` extension available |
 | `SESSION_SECRET` | yes in prod | 32+ random chars; the server refuses to boot in production otherwise |
-| `ANTHROPIC_API_KEY` | no | Enables Claude extraction, plans, questions, rewording, grading |
+| `ANTHROPIC_API_KEY` | no | Claude (paid, best quality) for extraction, plans, questions, rewording, grading |
+| `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` / `LLM_EXTRACTION_MODEL` | no | **Free alternative**: any OpenAI-compatible API (Gemini free tier, Groq, local Ollama). Used only when `ANTHROPIC_API_KEY` is empty; hosted URLs need a key |
 | `CLAUDE_REASONING_MODEL` / `CLAUDE_EXTRACTION_MODEL` | no | Defaults `claude-opus-5-5` / `claude-haiku-5-5` |
 | `EMBEDDINGS` | no | `local` (default) or `off` |
 | `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` | no | Free key from developer.adzuna.com; adds India (`/in/`) aggregator search |
@@ -47,16 +48,34 @@ SESSION_SECRET=$(openssl rand -hex 32) docker compose up --build
 ```
 Verified 2026-10-30: both images build, migrations and taxonomy seeding run on boot, and `npm run e2e` passes against the stack.
 
-## Deploying on Render (blueprint included)
-1. Push the repo to GitHub.
-2. Render → **New → Blueprint** → select the repo. `render.yaml` creates `careerpilot-db` (Postgres 17), `careerpilot-api` and `careerpilot-web`.
+## Free AI layer (optional)
+CareerPilot works fully without AI. To add it for free:
+
+**Google Gemini (free tier).** Create a key at https://aistudio.google.com/apikey (Google account, no card), then in `.env`:
+```
+LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+LLM_API_KEY=your-key
+LLM_MODEL=gemini-3.8-flash
+LLM_EXTRACTION_MODEL=gemini-3.5-flash-lite
+```
+Gemma 4 is also on the free tier; list exact model IDs with `curl -H "Authorization: Bearer $KEY" https://generativelanguage.googleapis.com/v1beta/openai/models`. Free-tier limits are per minute/day, and Google may use free-tier content to improve its products (the privacy page says so).
+
+**Ollama (local, private, no key).** `brew install ollama && brew services start ollama && ollama pull qwen2.5:3b`, then `LLM_BASE_URL=http://localhost:11434/v1` and `LLM_MODEL=qwen2.5:3b`. Slower on an 8 GB laptop, but nothing leaves the machine.
+
+Whatever the model, every AI output passes the same guards (taxonomy, verbatim sentences, grounding check). If a call fails or returns junk, the feature falls back to the rules.
+
+## Deploying for free (Render + Neon, blueprint included)
+1. **Database:** sign up at https://neon.tech (free, GitHub login) → create a project → copy the connection string (`postgres://…neon.tech/…?sslmode=require`). pgvector is available; migrations enable it on first boot.
+2. **App:** sign up at https://render.com with GitHub → **New → Blueprint** → select `Sandhya-scaler/CareerPilot`. `render.yaml` creates `careerpilot-api` and `careerpilot-web` on free instances.
 3. When prompted:
-   - **API:** `APP_URL` and `WEB_ORIGIN` = the web service URL (e.g. `https://careerpilot-web.onrender.com`), `ADMIN_EMAILS` = your email. Optionally set `ANTHROPIC_API_KEY`, `SMTP_URL`, `EMAIL_FROM` and the Adzuna keys.
-   - **Web:** `API_URL` = the API service URL (e.g. `https://careerpilot-api.onrender.com`). It's used at build time.
-4. Service URLs are only known after creation. If you guessed them wrong, fix them and redeploy the web service (its build bakes `API_URL`).
+   - **API:** `DATABASE_URL` = the Neon string, `APP_URL` and `WEB_ORIGIN` = `https://careerpilot-web.onrender.com` (your web URL), `ADMIN_EMAILS` = your email, `LLM_API_KEY` = your Gemini key (or leave empty for rules only). Leave `SMTP_URL`/`EMAIL_FROM` empty unless you have an email provider.
+   - **Web:** `API_URL` = `https://careerpilot-api.onrender.com` (your API URL; it's used at build time).
+4. If the actual service URLs differ from what you entered, update those values and redeploy the web service.
 5. Open the web URL and create your account. `/admin` works for `ADMIN_EMAILS`.
 
-The blueprint is written to Render's spec but hasn't been applied (needs your account). If Render rejects a field, the dashboard shows which.
+Free instances sleep after about 15 minutes idle, so the first visit afterwards takes about a minute. Scheduled jobs (daily ghost-job check, Monday emails) only run while the API is awake. Weekly reports are always built live when you open the page.
+
+The blueprint follows Render's spec but hasn't been applied (that needs your account). If Render rejects a field, its dashboard shows which; paste the error and it can be fixed.
 
 ## Deploying elsewhere
 - **DB:** Neon or Supabase (both support pgvector). Run against an empty database; migrations apply on boot.

@@ -134,6 +134,7 @@ const RESUME_SYSTEM = `You tag resume lines with the technical skills they direc
 Rules:
 - Only tag a skill when the line itself shows it being used or named (e.g. "trained a ResNet-50" demonstrates CNNs and Deep Learning).
 - Never infer skills from job titles, company names, or general impressions.
+- Never infer a language from a framework (Spring Boot does not show Java; React does not show JavaScript): tag only what is named or unmistakably described.
 - Copy each line verbatim from the resume. Skip lines with no technical skill.
 - Use common canonical names (PyTorch, Object Detection, REST APIs, PostgreSQL).`;
 
@@ -149,12 +150,16 @@ export async function parseResume(text: string): Promise<ParsedResume & { usedLl
         label: "resume-tagging", tier: "extraction", system: RESUME_SYSTEM, input: text, schema: LlmEvidence }),
     () => ({ items: [] }),
   );
+  // The model may only add skills the rules found nowhere in the resume. It can't raise the tier of a
+  // skill the rules already graded (measured: a 3B model tagged "Java" on a Spring Boot bullet,
+  // turning a skills-list claim into fake "demonstrated" evidence).
+  const ruleSkills = new Set(parsed.evidence.flatMap((e) => e.skills));
   for (const item of value.items) {
     const target = parsed.evidence.find((e) => e.text === item.line.trim() || item.line.includes(e.text));
     if (!target) continue; // not verbatim: ignore rather than invent
     for (const s of item.skills) {
       const canonical = taxonomy.normalize(s);
-      if (canonical && !target.skills.includes(canonical)) target.skills.push(canonical);
+      if (canonical && !ruleSkills.has(canonical) && !target.skills.includes(canonical)) target.skills.push(canonical);
     }
   }
   return { ...parsed, usedLlm };

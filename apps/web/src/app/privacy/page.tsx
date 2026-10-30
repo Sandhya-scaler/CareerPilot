@@ -14,8 +14,10 @@ export default function Privacy() {
           evidence extracted from them, job descriptions you save, your plan, practice answers, applications and weekly reports.
         </p>
         <p>
-          <strong className="text-ink">What we send elsewhere.</strong> If the operator has configured an Anthropic API key, resume and job
-          description text is sent to Anthropic&apos;s API to extract skills, write plans and grade practice answers. Job searches call public
+          <strong className="text-ink">What we send elsewhere.</strong> If the operator has configured an AI provider, resume and job
+          description text is sent to it to extract skills, write plans and grade practice answers. By default Anthropic&apos;s API doesn&apos;t
+          train on it, and a local model (Ollama) never sends it anywhere. On Google Gemini&apos;s free tier, Google may use it to improve
+          its products. Job searches call public
           job-board APIs (Greenhouse, Lever, Ashby, and Adzuna if enabled) with the role and location only, never your resume. GitHub
           import reads public repositories for the username you enter.
         </p>

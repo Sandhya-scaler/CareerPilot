@@ -149,9 +149,9 @@ export async function extractRequirements(jdText: string): Promise<{ requirement
     const skill = taxonomy.normalize(r.skill);
     const sentence = r.source_sentence.replace(/\s+/g, " ").trim();
     if (!skill || !haystack.includes(sentence.toLowerCase().slice(0, 80))) continue;
-    const prev = found.get(skill);
-    if (!prev) found.set(skill, { skill, kind: r.kind, yearsMin: r.years_min, sourceSentence: sentence });
-    else if (prev.kind !== r.kind && r.kind === "must" && !NICE_CUE.test(prev.sourceSentence)) prev.kind = "must";
+    // The model only adds skills the rules missed; it never overrides the rules' must/nice reading
+    // (measured: letting it upgrade nice→must broke "A or B" alternatives and lowered accuracy).
+    if (!found.has(skill)) found.set(skill, { skill, kind: r.kind, yearsMin: r.years_min, sourceSentence: sentence });
   }
   return { requirements: [...found.values()], usedLlm };
 }

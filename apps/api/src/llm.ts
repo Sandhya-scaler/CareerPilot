@@ -1,19 +1,34 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import type { z } from "zod";
+import { z } from "zod";
 import { config } from "./config.js";
 import { currentUserId } from "./context.js";
 import { query } from "./db/pool.js";
 
 /**
- * Thin wrapper over Claude structured outputs.
- *
- * Every LLM-backed feature in CareerPilot has a deterministic fallback, so callers check
- * `llmEnabled()` and degrade gracefully when no key is configured or a call fails.
+ * Structured-output LLM calls. Providers, in order of preference:
+ *   1. Claude (ANTHROPIC_API_KEY): native structured outputs.
+ *   2. Any OpenAI-compatible endpoint (LLM_BASE_URL): free options are Ollama (local), Groq and
+ *      Gemini's free tiers. Output is requested as JSON and validated against the same zod schema.
+ *   3. None: every feature falls back to its deterministic rules.
+ * Callers check `llmEnabled()` (via withFallback) and degrade gracefully on any failure.
  */
 let client: Anthropic | null = null;
 
-export const llmEnabled = () => Boolean(config.ANTHROPIC_API_KEY);
+export type Provider = "anthropic" | "openai-compatible" | "none";
+
+export function llmProvider(): Provider {
+  if (config.ANTHROPIC_API_KEY) return "anthropic";
+  if (config.LLM_BASE_URL && config.LLM_MODEL) {
+    // Hosted APIs need a key; a local server (Ollama on localhost / a private network name) doesn't.
+    const host = new URL(config.LLM_BASE_URL).hostname;
+    const local = host === "localhost" || host === "127.0.0.1" || !host.includes(".");
+    if (config.LLM_API_KEY || local) return "openai-compatible";
+  }
+  return "none";
+}
+
+export const llmEnabled = () => llmProvider() !== "none";
 
 function getClient() {
   client ??= new Anthropic({ apiKey: config.ANTHROPIC_API_KEY, maxRetries: 3 });
@@ -36,13 +51,18 @@ export function costUsd(model: string, input: number, output: number, cacheRead 
   return (input * i + output * o + cacheRead * c) / 1_000_000;
 }
 
-async function recordUsage(label: string, model: string, usage: { input_tokens: number; output_tokens: number; cache_read_input_tokens?: number | null }) {
+async function recordUsage(
+  label: string,
+  model: string,
+  usage: { input_tokens: number; output_tokens: number; cache_read_input_tokens?: number | null },
+  fixedCost?: number,
+) {
   try {
     await query(
       `INSERT INTO llm_usage (user_id, label, model, input_tokens, output_tokens, cache_read_tokens, cost_usd)
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [currentUserId(), label, model, usage.input_tokens, usage.output_tokens, usage.cache_read_input_tokens ?? 0,
-        costUsd(model, usage.input_tokens, usage.output_tokens, usage.cache_read_input_tokens ?? 0)],
+        fixedCost ?? costUsd(model, usage.input_tokens, usage.output_tokens, usage.cache_read_input_tokens ?? 0)],
     );
   } catch (e) {
     console.warn("[llm] usage not recorded:", (e as Error).message);
@@ -63,7 +83,9 @@ export interface StructuredCall<S extends z.ZodType> {
 }
 
 export async function structured<S extends z.ZodType>(call: StructuredCall<S>): Promise<z.infer<S>> {
-  if (!llmEnabled()) throw new LlmError("ANTHROPIC_API_KEY not configured");
+  const provider = llmProvider();
+  if (provider === "none") throw new LlmError("no LLM configured");
+  if (provider === "openai-compatible") return openAiCompatible(call);
   const model = call.tier === "reasoning" ? config.CLAUDE_REASONING_MODEL : config.CLAUDE_EXTRACTION_MODEL;
   // Server-side refusal fallback is available on Opus/Sonnet 5.5-class models, not Haiku.
   const withFallback = !model.includes("haiku");
@@ -85,6 +107,59 @@ export async function structured<S extends z.ZodType>(call: StructuredCall<S>): 
   if (response.stop_reason === "max_tokens") throw new LlmError("response truncated (max_tokens)");
   if (response.parsed_output == null) throw new LlmError("response did not match schema");
   return response.parsed_output as z.infer<S>;
+}
+
+/**
+ * OpenAI-compatible chat completions (Ollama, Groq, Gemini, OpenRouter, ...). Asks for JSON that
+ * matches the zod schema (json_schema response format, falling back to json_object + the schema in
+ * the prompt for providers that don't support it) and validates the result with zod.
+ */
+async function openAiCompatible<S extends z.ZodType>(call: StructuredCall<S>): Promise<z.infer<S>> {
+  const model = call.tier === "extraction" ? (config.LLM_EXTRACTION_MODEL ?? config.LLM_MODEL!) : config.LLM_MODEL!;
+  const schema = z.toJSONSchema(call.schema);
+  const base = config.LLM_BASE_URL!.replace(/\/$/, "");
+  const post = (responseFormat: object, system: string) =>
+    fetch(`${base}/chat/completions`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...(config.LLM_API_KEY ? { authorization: `Bearer ${config.LLM_API_KEY}` } : {}) },
+      body: JSON.stringify({
+        model,
+        temperature: 0.2,
+        max_tokens: Math.min(call.maxTokens ?? 8000, 8000),
+        response_format: responseFormat,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: call.input },
+        ],
+      }),
+      signal: AbortSignal.timeout(config.LLM_TIMEOUT_MS),
+    });
+
+  const withSchema = `${call.system}\n\nRespond with only a JSON object matching this JSON Schema:\n${JSON.stringify(schema)}`;
+  let res = await post({ type: "json_schema", json_schema: { name: "output", schema } }, withSchema);
+  if (res.status === 400 || res.status === 422) res = await post({ type: "json_object" }, withSchema);
+  if (!res.ok) throw new LlmError(`${new URL(base).host} returned ${res.status}: ${(await res.text()).slice(0, 200)}`);
+
+  const data = (await res.json()) as {
+    choices?: { message?: { content?: string }; finish_reason?: string }[];
+    usage?: { prompt_tokens?: number; completion_tokens?: number };
+  };
+  await recordUsage(call.label ?? call.tier, model, {
+    input_tokens: data.usage?.prompt_tokens ?? 0,
+    output_tokens: data.usage?.completion_tokens ?? 0,
+  }, 0);
+  const choice = data.choices?.[0];
+  if (choice?.finish_reason === "length") throw new LlmError("response truncated");
+  const text = (choice?.message?.content ?? "").replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new LlmError("response was not valid JSON");
+  }
+  const parsed = call.schema.safeParse(json);
+  if (!parsed.success) throw new LlmError(`response did not match schema: ${parsed.error.issues[0]?.message}`);
+  return parsed.data as z.infer<S>;
 }
 
 /** Runs an LLM call, returning `fallback()` if the LLM is disabled or errors. */

@@ -36,3 +36,11 @@ For each tailored resume version:
 - `uv run python -m evals.run --component extraction` → prints metrics and writes `evals/results/<date>.json`.
 - Run on every prompt change. Add to CI in Phase 5.
 - Keep a `evals/failures.md` log. Each real-world bug becomes a new gold case.
+
+## Results log
+| Date | Mode | JD P / R / must-nice | Resume P / R / tier exact | Notes |
+|---|---|---|---|---|
+| 2026-10-30 | rules only | 96.5 / 100 / 96.3 | 98.8 / 100 / 97.5 | baseline |
+| 2026-10-30 | rules + qwen2.5:3b (Ollama, local) | 96.5 / 100 / 96.3 | 98.8 / 100 / 97.5 | First run was *worse* (must/nice 92.7, tier exact 93.8): the model upgraded "nice" → "must" and tagged Java on a Spring Boot bullet. Fixed by making AI output additive-only (it can add missed skills, never override the rules). ~12 s per document on an 8 GB Mac. |
+
+On this small set the rules are already near the ceiling, so AI extraction doesn't raise the scores. Its value shows on grading: on the same IoU/NMS question, a keyword-stuffed non-answer scored 1/5 with the local model (it reads for meaning), while a correct, well-explained answer scored 3/5 (small models grade harshly). Re-run with Gemini (`npm run eval -- --llm`) once a free key is set.

@@ -1,43 +1,42 @@
-# Render Blueprint: Dashboard → New → Blueprint → pick this repo.
-# Creates Postgres 17 (pgvector is available on Render Postgres), the API and the web app.
-# Fill the `sync: false` values when Render prompts for them (see docs/06-operations.md).
-databases:
-  - name: careerpilot-db
-    plan: basic-256mb
-    postgresMajorVersion: "17"
-    databaseName: careerpilot
-    user: careerpilot
-
+# Render Blueprint, free setup: Render's free web services + a free Neon Postgres database.
+#   1. Create a free Postgres at neon.tech (any region near your users) and copy its connection string.
+#   2. Render → New → Blueprint → pick this repo. Fill the `sync: false` values when prompted
+#      (see docs/06-operations.md). DATABASE_URL = the Neon connection string.
+# Free web services sleep after ~15 min idle; the first request then takes about a minute.
+# The API uses ~350 MB with the embedding model loaded, within the 512 MB free instance.
 services:
   - type: web
     name: careerpilot-api
     runtime: docker
     dockerfilePath: ./apps/api/Dockerfile
     dockerContext: .
-    plan: starter
+    plan: free
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DATABASE_URL
-        fromDatabase: { name: careerpilot-db, property: connectionString }
+      - key: DATABASE_URL # Neon connection string (postgres://...neon.tech/...?sslmode=require)
+        sync: false
       - key: SESSION_SECRET
         generateValue: true
-      - key: ANTHROPIC_API_KEY
-        sync: false
       - key: APP_URL # public URL of careerpilot-web, e.g. https://careerpilot-web.onrender.com
         sync: false
       - key: WEB_ORIGIN # same as APP_URL
         sync: false
       - key: ADMIN_EMAILS # your email, for /admin beta metrics
         sync: false
-      - key: SMTP_URL # optional: smtps://user:pass@smtp.resend.com:465
+      # Free AI layer (optional): Gemini's free tier through its OpenAI-compatible API.
+      - key: LLM_BASE_URL
+        value: https://generativelanguage.googleapis.com/v1beta/openai
+      - key: LLM_MODEL
+        value: gemini-3.8-flash
+      - key: LLM_EXTRACTION_MODEL
+        value: gemini-3.5-flash-lite
+      - key: LLM_API_KEY # Gemini key from aistudio.google.com (leave empty to use only the free rules)
         sync: false
-      - key: EMAIL_FROM # optional: CareerPilot <reports@yourdomain>
+      - key: SMTP_URL # optional: smtps://user:pass@smtp.provider.com:465
         sync: false
-      - key: ADZUNA_APP_ID
-        sync: false
-      - key: ADZUNA_APP_KEY
+      - key: EMAIL_FROM
         sync: false
 
   - type: web
@@ -45,9 +44,9 @@ services:
     runtime: docker
     dockerfilePath: ./apps/web/Dockerfile
     dockerContext: .
-    plan: starter
+    plan: free
     envVars:
-      # Build-time: where Next proxies /api and /auth. The API's public URL,
+      # Build-time: where Next proxies /api and /auth, i.e. the API's public URL,
       # e.g. https://careerpilot-api.onrender.com
       - key: API_URL
         sync: false

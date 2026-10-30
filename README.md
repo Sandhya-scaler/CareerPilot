@@ -14,7 +14,7 @@ CareerPilot reads current job descriptions for a role and checks every requireme
 - **GitHub import:** languages GitHub measures in your public repos count as verified evidence.
 - **Weekly report:** what you did, new evidence, readiness change, what's next, optionally emailed every Monday.
 
-Everything works **without an API key** (rules, a curated question bank, keyword grading). Add `ANTHROPIC_API_KEY` for Claude-powered extraction, plans, questions, rewording and grading.
+Everything works **for free without any API key** (rules, a curated question bank, keyword grading). For an AI layer, use a **free Gemini key** or a **local Ollama model** through `LLM_BASE_URL`, or Claude via `ANTHROPIC_API_KEY`. See [06 operations](docs/06-operations.md#free-ai-layer-optional). Every AI output passes the same no-fabrication checks.
 
 ## Quick start
 ```bash
@@ -27,6 +27,7 @@ npm run dev:api                 # :4000
 npm run dev:web                 # :3000 → create an account → "Prepare for a role"
 ```
 Or with Docker: `SESSION_SECRET=$(openssl rand -hex 32) docker compose up --build` → http://localhost:3000.
+Free hosting: Render + Neon via the included `render.yaml` ([steps](docs/06-operations.md#deploying-for-free-render--neon-blueprint-included)).
 
 No database handy? Try the offline CLI: `npm run cli -w apps/api -- match path/to/resume.pdf path/to/jd.txt`.
 
