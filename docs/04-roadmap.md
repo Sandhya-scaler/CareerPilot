@@ -46,16 +46,15 @@ Status as of 2026-10-30. ✅ done and tested · 🟡 partly done · ⬜ not star
 - ✅ Multi-instance safe: scheduler claims and taxonomy seeding coordinate through Postgres
 - ✅ Beta tooling: in-app feedback, `/admin` metrics (activation, evidence growth, interview rate tailored vs not, AI spend)
 - ✅ India coverage: 33 verified boards, 24 with India roles
-- 🟡 CI workflow written; runs once the repo is pushed to GitHub
+- ✅ CI green on GitHub (typecheck, 88 tests incl. eval gate, eval report, web build): github.com/Sandhya-scaler/CareerPilot
 - 🟡 Render blueprint (`render.yaml`) written; deploying needs your Render account
 - ⬜ Claude live run (`npm run eval -- --llm`): needs `ANTHROPIC_API_KEY`
 - ⬜ Beta with 10–20 classmates, then outcome interviews (the tooling is ready)
 
 ## What only you can do
 1. Add `ANTHROPIC_API_KEY` to `.env`, then run `npm run eval -- --llm` and compare with rules-only (96.5% P / 100% R).
-2. `gh auth login`, then push (CI runs automatically).
-3. Deploy the Render blueprint (steps in `06-operations.md`).
-4. Invite classmates; read `/admin` weekly. Grow the eval set with consented, anonymized resumes.
+2. Deploy the Render blueprint (steps in `06-operations.md`).
+3. Invite classmates; read `/admin` weekly. Grow the eval set with consented, anonymized resumes.
 
 ## Risks
 | Risk | Mitigation (in place) |
