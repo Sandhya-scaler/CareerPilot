@@ -33,9 +33,9 @@ For each tailored resume version:
 3. Anything else counts as a violation, so the edit is rejected and logged.
 
 ## Process
-- `uv run python -m evals.run --component extraction` → prints metrics and writes `evals/results/<date>.json`.
-- Run on every prompt change. Add to CI in Phase 5.
-- Keep a `evals/failures.md` log. Each real-world bug becomes a new gold case.
+- `npm run eval -- --verbose` (rules) or `npm run eval -- --llm --verbose` (with the configured model) prints metrics and per-document misses, and writes `apps/api/evals/results/<date>-<mode>.json`.
+- The test suite gates the targets (`test/extract.test.ts`), and CI runs it on every push.
+- Each real-world bug becomes a new gold case or regression test (e.g. the "e.g." sentence split and the relevance gate).
 
 ## Results log
 | Date | Mode | JD P / R / must-nice | Resume P / R / tier exact | Notes |
