@@ -117,6 +117,7 @@ export async function structured<S extends z.ZodType>(call: StructuredCall<S>): 
 async function openAiCompatible<S extends z.ZodType>(call: StructuredCall<S>): Promise<z.infer<S>> {
   const model = call.tier === "extraction" ? (config.LLM_EXTRACTION_MODEL ?? config.LLM_MODEL!) : config.LLM_MODEL!;
   const schema = z.toJSONSchema(call.schema);
+  const deadline = Date.now() + config.LLM_TOTAL_BUDGET_MS;
   const base = config.LLM_BASE_URL!.replace(/\/$/, "");
   const post = (responseFormat: object, system: string, model: string) =>
     fetch(`${base}/chat/completions`, {
@@ -132,27 +133,41 @@ async function openAiCompatible<S extends z.ZodType>(call: StructuredCall<S>): P
           { role: "user", content: call.input },
         ],
       }),
-      signal: AbortSignal.timeout(config.LLM_TIMEOUT_MS),
+      signal: AbortSignal.timeout(Math.max(1000, Math.min(config.LLM_TIMEOUT_MS, deadlineLeft()))),
     });
 
+  const deadlineLeft = () => deadline - Date.now();
   const withSchema = `${call.system}\n\nRespond with only a JSON object matching this JSON Schema:\n${JSON.stringify(schema)}`;
-  // Free tiers return 429 (rate limit) and 503 (busy) often: retry with backoff, then try the
-  // next model in LLM_FALLBACK_MODELS.
+  // Free tiers fail in two ways: 503 "busy" (retry once after a pause) and 429 "quota" (per-model
+  // daily/minute limits: go straight to the next model). Timeouts also move on. The whole call has a
+  // time budget; past it, the caller's rules-based fallback takes over.
   const models = [model, ...(config.LLM_FALLBACK_MODELS ?? "").split(",").map((m) => m.trim()).filter((m) => m && m !== model)];
   let res: Response | null = null;
   let usedModel = model;
   outer: for (const m of models) {
     usedModel = m;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      res = await post({ type: "json_schema", json_schema: { name: "output", schema } }, withSchema, m);
-      if (res.status === 400 || res.status === 422) res = await post({ type: "json_object" }, withSchema, m);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (Date.now() > deadline) break outer;
+      try {
+        res = await post({ type: "json_schema", json_schema: { name: "output", schema } }, withSchema, m);
+        if (res.status === 400 || res.status === 422) res = await post({ type: "json_object" }, withSchema, m);
+      } catch (e) {
+        // Timeout or network error: this model is too slow right now, so move to the next one.
+        res = null;
+        console.warn(`[llm] ${m}: ${(e as Error).message}; trying next model`);
+        continue outer;
+      }
       if (res.ok) break outer;
-      if (res.status !== 429 && res.status < 500) break outer; // a real error: don't retry
+      if (res.status === 429) continue outer; // this model's quota is used up: next model
+      if (res.status < 500) break outer; // a real error (bad key, bad request): don't retry
       const retryAfter = Number(res.headers.get("retry-after"));
-      await new Promise((r) => setTimeout(r, Math.min(20_000, (retryAfter > 0 ? retryAfter * 1000 : 0) || config.LLM_RETRY_BASE_MS * 3 ** attempt)));
+      const wait = Math.min(10_000, (retryAfter > 0 ? retryAfter * 1000 : 0) || config.LLM_RETRY_BASE_MS * 3 ** attempt);
+      if (Date.now() + wait > deadline) break outer;
+      await new Promise((r) => setTimeout(r, wait));
     }
   }
-  if (!res?.ok) throw new LlmError(`${new URL(base).host} returned ${res?.status}: ${(await res?.text())?.slice(0, 200)}`);
+  if (!res) throw new LlmError(`${new URL(base).host}: no model answered within the time budget`);
+  if (!res.ok) throw new LlmError(`${new URL(base).host} returned ${res.status}: ${(await res.text()).slice(0, 200)}`);
 
   const data = (await res.json()) as {
     choices?: { message?: { content?: string }; finish_reason?: string }[];

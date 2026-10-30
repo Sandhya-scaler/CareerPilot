@@ -7,7 +7,7 @@ const Env = z.object({
   CLAUDE_EXTRACTION_MODEL: z.string().default("claude-haiku-5-5"),
   // Free alternative: any OpenAI-compatible endpoint (used when ANTHROPIC_API_KEY is unset).
   //   Gemini (free tier): LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
-  //                       LLM_API_KEY=<from aistudio.google.com>  LLM_MODEL=gemini-3.8-flash
+  //                       LLM_API_KEY=<from aistudio.google.com>  LLM_MODEL=gemini-3.5-flash
   //   Ollama (local):     LLM_BASE_URL=http://localhost:11434/v1  LLM_MODEL=qwen2.5:3b
   //   Groq (free tier):   LLM_BASE_URL=https://api.groq.com/openai/v1  LLM_API_KEY=...  LLM_MODEL=<see console.groq.com>
   LLM_BASE_URL: z.string().url().optional(),
@@ -17,6 +17,8 @@ const Env = z.object({
   /** Comma-separated models to try when the main one is busy or rate-limited. */
   LLM_FALLBACK_MODELS: z.string().optional(),
   LLM_RETRY_BASE_MS: z.coerce.number().default(1500),
+  /** Max total time for one AI call across retries and fallback models, then rules take over. */
+  LLM_TOTAL_BUDGET_MS: z.coerce.number().default(240_000),
   LLM_TIMEOUT_MS: z.coerce.number().default(180_000),
   EMBEDDINGS: z.enum(["local", "off"]).default("local"),
   ADZUNA_APP_ID: z.string().optional(),

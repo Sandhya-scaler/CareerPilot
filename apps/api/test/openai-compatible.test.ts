@@ -24,6 +24,7 @@ beforeAll(async () => {
       const body = JSON.parse(raw);
       requests.push(body);
       const r = reply(body);
+      if (r.status === -1) return; // simulate a model that never answers
       res.writeHead(r.status, { "content-type": "application/json" });
       res.end(JSON.stringify(r.json));
     });
@@ -80,19 +81,39 @@ describe("OpenAI-compatible provider (free: Ollama / Groq / Gemini)", () => {
     cfg.LLM_RETRY_BASE_MS = 1;
     cfg.LLM_FALLBACK_MODELS = "backup-model";
     let calls = 0;
-    reply = () => (++calls <= 2 ? { status: 503, json: { error: "busy" } } : chat('{"skills":["SQL"]}'));
+    reply = (b) => ((b as unknown as { model: string }).model === "backup-model" || ++calls > 2 ? chat('{"skills":["SQL"]}') : { status: 503, json: { error: "busy" } });
     expect(await structured({ tier: "reasoning", system: "s", input: "i", schema: Schema })).toEqual({ skills: ["SQL"] });
-    expect(requests.map((r) => r.model)).toEqual(["qwen2.5:3b", "qwen2.5:3b", "qwen2.5:3b"]);
+    expect(requests.map((r) => r.model)).toEqual(["qwen2.5:3b", "qwen2.5:3b", "backup-model"]); // one retry, then next model
 
     requests.length = 0;
     reply = (b) => ((b as unknown as { model: string }).model === "backup-model" ? chat('{"skills":["Go"]}') : { status: 429, json: { error: "rate" } });
     expect(await structured({ tier: "reasoning", system: "s", input: "i", schema: Schema })).toEqual({ skills: ["Go"] });
-    expect(requests.map((r) => r.model)).toEqual(["qwen2.5:3b", "qwen2.5:3b", "qwen2.5:3b", "backup-model"]);
+    expect(requests.map((r) => r.model)).toEqual(["qwen2.5:3b", "backup-model"]); // quota (429): next model at once
 
     requests.length = 0;
     reply = () => ({ status: 401, json: { error: "bad key" } });
     await expect(structured({ tier: "reasoning", system: "s", input: "i", schema: Schema })).rejects.toThrow(/401/);
     expect(requests).toHaveLength(1); // auth errors aren't retried
+    cfg.LLM_FALLBACK_MODELS = undefined;
+  });
+
+  it("stops at the total time budget so the rules can take over", async () => {
+    cfg.LLM_TOTAL_BUDGET_MS = 300;
+    cfg.LLM_FALLBACK_MODELS = "also-slow";
+    reply = () => ({ status: -1, json: null });
+    const t = Date.now();
+    await expect(structured({ tier: "reasoning", system: "s", input: "i", schema: Schema })).rejects.toThrow(/time budget/);
+    expect(Date.now() - t).toBeLessThan(3000);
+    cfg.LLM_TOTAL_BUDGET_MS = 240_000;
+    cfg.LLM_FALLBACK_MODELS = undefined;
+  });
+
+  it("moves to the next model when one times out", async () => {
+    cfg.LLM_TIMEOUT_MS = 200;
+    cfg.LLM_FALLBACK_MODELS = "fast-model";
+    reply = (b) => ((b as unknown as { model: string }).model === "fast-model" ? chat('{"skills":["Rust"]}') : { status: -1, json: null });
+    expect(await structured({ tier: "reasoning", system: "s", input: "i", schema: Schema })).toEqual({ skills: ["Rust"] });
+    cfg.LLM_TIMEOUT_MS = 180_000;
     cfg.LLM_FALLBACK_MODELS = undefined;
   });
 

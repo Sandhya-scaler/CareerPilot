@@ -42,5 +42,8 @@ For each tailored resume version:
 |---|---|---|---|---|
 | 2026-10-30 | rules only | 96.5 / 100 / 96.3 | 98.8 / 100 / 97.5 | baseline |
 | 2026-10-30 | rules + qwen2.5:3b (Ollama, local) | 96.5 / 100 / 96.3 | 98.8 / 100 / 97.5 | First run was *worse* (must/nice 92.7, tier exact 93.8): the model upgraded "nice" → "must" and tagged Java on a Spring Boot bullet. Fixed by making AI output additive-only (it can add missed skills, never override the rules). ~12 s per document on an 8 GB Mac. |
+| 2026-10-30 | rules + gemini-3.5-flash-lite (free tier) | 96.5 / 100 / 96.3 | 98.8 / 100 / 97.5 | All 12 calls answered by Gemini, $0, 48 s total. |
+
+Live golden path on Gemini (2026-10-30): the e2e browser test passes in 26 s with every AI step (resume tagging, plan, questions, rewording, grading) served by `gemini-3.5-flash-lite` and no fallbacks. Its two resume rewrites kept every fact and passed the grounding check. The questions were interview-grade (self-attention complexity, LoRA memory savings, ReAct agents) with specific rubrics. Earlier the same day `gemini-3.5-flash` ran out of free daily quota (429) and sometimes took over 60 s, which is why Flash-Lite is the default and why calls now have a time budget.
 
 On this small set the rules are already near the ceiling, so AI extraction doesn't raise the scores. Its value shows on grading: on the same IoU/NMS question, a keyword-stuffed non-answer scored 1/5 with the local model (it reads for meaning), while a correct, well-explained answer scored 3/5 (small models grade harshly). Re-run with Gemini (`npm run eval -- --llm`) once a free key is set.

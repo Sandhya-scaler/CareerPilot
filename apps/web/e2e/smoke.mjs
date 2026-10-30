@@ -15,7 +15,8 @@ const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH,
 const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
-page.setDefaultTimeout(20_000);
+// AI-backed steps (plan, rewording, grading) take longer when a model is configured.
+page.setDefaultTimeout(Number(process.env.E2E_TIMEOUT_MS ?? 120_000));
 
 try {
   await page.goto(`${BASE}/login`);
@@ -51,7 +52,7 @@ try {
   await page.fill("input[aria-label='What you did']", "Fine-tuned YOLOv8 in PyTorch on 1,200 shelf images, 0.81 mAP");
   await page.click("button:has-text('Add line')");
   await page.click("button:has-text('Looks right, build my plan')");
-  await page.waitForSelector("text=Your plan is ready", { timeout: 60_000 });
+  await page.waitForSelector("text=Your plan is ready", { timeout: 300_000 });
   step("pipeline finished");
 
   await page.click("text=See what the market asks for");

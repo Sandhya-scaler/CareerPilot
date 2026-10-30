@@ -36,8 +36,8 @@ No database handy? Try the offline CLI: `npm run cli -w apps/api -- match path/t
 |---|---|
 | JD requirement extraction (8 hand-labeled JDs, rules only) | precision 96.5%, recall 100%, must/nice 96.3% |
 | Resume evidence (4 hand-labeled resumes, rules only) | precision 98.8%, recall 100%, tier exact 97.5% |
-| API tests | 88 passing: extraction, scoring, grounding, HITL pipeline, interviews, isolation between users, LLM guards with a mocked model that fabricates, email over real SMTP, multi-instance claims |
-| End to end | `npm run e2e` drives the golden path in Chrome as a new user; passes against both the dev servers and `docker compose` |
+| API tests | 97 passing: extraction, scoring, grounding, HITL pipeline, interviews, isolation between users, LLM guards with a mocked model that fabricates, email over real SMTP, multi-instance claims |
+| End to end | `npm run e2e` drives the golden path in Chrome as a new user; passes against the dev servers, `docker compose`, and with Gemini's free tier powering every AI step (26 s) |
 
 These are small, synthetic eval sets. Grow them with real (consented) resumes before trusting the numbers broadly.
 

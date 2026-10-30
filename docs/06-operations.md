@@ -55,12 +55,14 @@ CareerPilot works fully without AI. To add it for free:
 ```
 LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
 LLM_API_KEY=your-key
-LLM_MODEL=gemini-3.8-flash
+LLM_MODEL=gemini-3.5-flash-lite
 LLM_EXTRACTION_MODEL=gemini-3.5-flash-lite
-LLM_FALLBACK_MODELS=gemini-3.5-flash,gemini-3.6-flash
+LLM_FALLBACK_MODELS=gemini-3.1-flash-lite,gemini-3.6-flash,gemini-3.5-flash
+LLM_TIMEOUT_MS=45000
+LLM_TOTAL_BUDGET_MS=90000
 ```
-The free tier sometimes answers 503 "high demand" or 429: CareerPilot retries with backoff, then tries the fallback models, then falls back to the rules.
-Gemma 4 is also on the free tier; list exact model IDs with `curl -H "Authorization: Bearer $KEY" https://generativelanguage.googleapis.com/v1beta/openai/models`. Free-tier limits are per minute/day, and Google may use free-tier content to improve its products (the privacy page says so).
+The free tier sometimes answers 503 "high demand" or 429: CareerPilot retries with backoff, moves to the next fallback model on errors or timeouts, and finally uses the rules. Quota errors (429) skip straight to the next model; each AI step has a 90 s total budget (`LLM_TOTAL_BUDGET_MS`), so a user never waits longer than that before the rules answer instead.
+Measured 2026-10-30 with a new free key: `gemini-3.5-flash-lite` answers in 3–4 s and has the most headroom, so it's the default for every step; `gemini-3.5-flash` hit its free daily quota (429) after a day of testing and sometimes took over 60 s; `gemini-2.5-flash` is closed to new users; Gemma 4 (`gemma-4-31b-it`) works but is slow (~22 s) and prefixes answers with `<thought>` text, so it's a poor fit for structured output. List the models your key can use with `curl -H "Authorization: Bearer $KEY" https://generativelanguage.googleapis.com/v1beta/openai/models`. Free-tier limits are per minute/day, and Google may use free-tier content to improve its products (the privacy page says so).
 
 **Ollama (local, private, no key).** `brew install ollama && brew services start ollama && ollama pull qwen2.5:3b`, then `LLM_BASE_URL=http://localhost:11434/v1` and `LLM_MODEL=qwen2.5:3b`. Slower on an 8 GB laptop, but nothing leaves the machine.
 

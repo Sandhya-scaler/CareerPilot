@@ -48,14 +48,13 @@ Status as of 2026-10-30. ✅ done and tested · 🟡 partly done · ⬜ not star
 - ✅ India coverage: 33 verified boards, 24 with India roles
 - ✅ CI green on GitHub (typecheck, 88 tests incl. eval gate, eval report, web build): github.com/Sandhya-scaler/CareerPilot
 - 🟡 Free deploy: `render.yaml` (Render free + Neon free) written; applying it needs your accounts
-- ✅ Free AI layer: any OpenAI-compatible API (Gemini free tier, Groq, local Ollama), same guards as Claude; verified live with Ollama (qwen2.5:3b), results in `05-evaluation.md`
-- ⬜ AI eval with a real model (`npm run eval -- --llm`): Gemini needs your free key
+- ✅ Free AI layer: any OpenAI-compatible API (Gemini free tier, Groq, local Ollama), same guards as Claude. Verified live with Ollama and with Gemini (e2e passes on Gemini in 26 s); quota/busy/timeout handling with fallback models and a per-step time budget
+- ✅ AI eval with real models (Ollama, Gemini): equals rules-only on the eval set (additive-only by design); results in `05-evaluation.md`
 - ⬜ Beta with 10–20 classmates, then outcome interviews (the tooling is ready)
 
 ## What only you can do
-1. Get a free Gemini key (aistudio.google.com/apikey), put it in `.env` as `LLM_API_KEY` (see `06-operations.md`), then run `npm run eval -- --llm` and compare with rules-only (96.5% P / 100% R).
-2. Deploy for free: Neon + Render blueprint (steps in `06-operations.md`).
-3. Invite classmates; read `/admin` weekly. Grow the eval set with consented, anonymized resumes.
+1. Deploy for free: Neon + Render blueprint (steps in `06-operations.md`).
+2. Invite classmates; read `/admin` weekly. Grow the eval set with consented, anonymized resumes.
 
 ## Risks
 | Risk | Mitigation (in place) |
