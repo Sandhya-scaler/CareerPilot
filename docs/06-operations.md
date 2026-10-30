@@ -57,7 +57,9 @@ LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
 LLM_API_KEY=your-key
 LLM_MODEL=gemini-3.8-flash
 LLM_EXTRACTION_MODEL=gemini-3.5-flash-lite
+LLM_FALLBACK_MODELS=gemini-3.5-flash,gemini-3.6-flash
 ```
+The free tier sometimes answers 503 "high demand" or 429: CareerPilot retries with backoff, then tries the fallback models, then falls back to the rules.
 Gemma 4 is also on the free tier; list exact model IDs with `curl -H "Authorization: Bearer $KEY" https://generativelanguage.googleapis.com/v1beta/openai/models`. Free-tier limits are per minute/day, and Google may use free-tier content to improve its products (the privacy page says so).
 
 **Ollama (local, private, no key).** `brew install ollama && brew services start ollama && ollama pull qwen2.5:3b`, then `LLM_BASE_URL=http://localhost:11434/v1` and `LLM_MODEL=qwen2.5:3b`. Slower on an 8 GB laptop, but nothing leaves the machine.

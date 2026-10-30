@@ -118,7 +118,7 @@ async function openAiCompatible<S extends z.ZodType>(call: StructuredCall<S>): P
   const model = call.tier === "extraction" ? (config.LLM_EXTRACTION_MODEL ?? config.LLM_MODEL!) : config.LLM_MODEL!;
   const schema = z.toJSONSchema(call.schema);
   const base = config.LLM_BASE_URL!.replace(/\/$/, "");
-  const post = (responseFormat: object, system: string) =>
+  const post = (responseFormat: object, system: string, model: string) =>
     fetch(`${base}/chat/completions`, {
       method: "POST",
       headers: { "content-type": "application/json", ...(config.LLM_API_KEY ? { authorization: `Bearer ${config.LLM_API_KEY}` } : {}) },
@@ -136,15 +136,29 @@ async function openAiCompatible<S extends z.ZodType>(call: StructuredCall<S>): P
     });
 
   const withSchema = `${call.system}\n\nRespond with only a JSON object matching this JSON Schema:\n${JSON.stringify(schema)}`;
-  let res = await post({ type: "json_schema", json_schema: { name: "output", schema } }, withSchema);
-  if (res.status === 400 || res.status === 422) res = await post({ type: "json_object" }, withSchema);
-  if (!res.ok) throw new LlmError(`${new URL(base).host} returned ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  // Free tiers return 429 (rate limit) and 503 (busy) often: retry with backoff, then try the
+  // next model in LLM_FALLBACK_MODELS.
+  const models = [model, ...(config.LLM_FALLBACK_MODELS ?? "").split(",").map((m) => m.trim()).filter((m) => m && m !== model)];
+  let res: Response | null = null;
+  let usedModel = model;
+  outer: for (const m of models) {
+    usedModel = m;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      res = await post({ type: "json_schema", json_schema: { name: "output", schema } }, withSchema, m);
+      if (res.status === 400 || res.status === 422) res = await post({ type: "json_object" }, withSchema, m);
+      if (res.ok) break outer;
+      if (res.status !== 429 && res.status < 500) break outer; // a real error: don't retry
+      const retryAfter = Number(res.headers.get("retry-after"));
+      await new Promise((r) => setTimeout(r, Math.min(20_000, (retryAfter > 0 ? retryAfter * 1000 : 0) || config.LLM_RETRY_BASE_MS * 3 ** attempt)));
+    }
+  }
+  if (!res?.ok) throw new LlmError(`${new URL(base).host} returned ${res?.status}: ${(await res?.text())?.slice(0, 200)}`);
 
   const data = (await res.json()) as {
     choices?: { message?: { content?: string }; finish_reason?: string }[];
     usage?: { prompt_tokens?: number; completion_tokens?: number };
   };
-  await recordUsage(call.label ?? call.tier, model, {
+  await recordUsage(call.label ?? call.tier, usedModel, {
     input_tokens: data.usage?.prompt_tokens ?? 0,
     output_tokens: data.usage?.completion_tokens ?? 0,
   }, 0);

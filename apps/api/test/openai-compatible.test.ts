@@ -76,6 +76,26 @@ describe("OpenAI-compatible provider (free: Ollama / Groq / Gemini)", () => {
     expect(requests.map((r) => r.response_format.type)).toEqual(["json_schema", "json_object"]);
   });
 
+  it("retries busy/rate-limited responses, then falls back to the next model", async () => {
+    cfg.LLM_RETRY_BASE_MS = 1;
+    cfg.LLM_FALLBACK_MODELS = "backup-model";
+    let calls = 0;
+    reply = () => (++calls <= 2 ? { status: 503, json: { error: "busy" } } : chat('{"skills":["SQL"]}'));
+    expect(await structured({ tier: "reasoning", system: "s", input: "i", schema: Schema })).toEqual({ skills: ["SQL"] });
+    expect(requests.map((r) => r.model)).toEqual(["qwen2.5:3b", "qwen2.5:3b", "qwen2.5:3b"]);
+
+    requests.length = 0;
+    reply = (b) => ((b as unknown as { model: string }).model === "backup-model" ? chat('{"skills":["Go"]}') : { status: 429, json: { error: "rate" } });
+    expect(await structured({ tier: "reasoning", system: "s", input: "i", schema: Schema })).toEqual({ skills: ["Go"] });
+    expect(requests.map((r) => r.model)).toEqual(["qwen2.5:3b", "qwen2.5:3b", "qwen2.5:3b", "backup-model"]);
+
+    requests.length = 0;
+    reply = () => ({ status: 401, json: { error: "bad key" } });
+    await expect(structured({ tier: "reasoning", system: "s", input: "i", schema: Schema })).rejects.toThrow(/401/);
+    expect(requests).toHaveLength(1); // auth errors aren't retried
+    cfg.LLM_FALLBACK_MODELS = undefined;
+  });
+
   it("rejects malformed or truncated output", async () => {
     reply = () => chat("not json at all");
     await expect(structured({ tier: "reasoning", system: "s", input: "i", schema: Schema })).rejects.toThrow(/not valid JSON/);

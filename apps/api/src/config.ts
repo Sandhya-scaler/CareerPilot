@@ -14,6 +14,9 @@ const Env = z.object({
   LLM_API_KEY: z.string().optional(),
   LLM_MODEL: z.string().optional(),
   LLM_EXTRACTION_MODEL: z.string().optional(),
+  /** Comma-separated models to try when the main one is busy or rate-limited. */
+  LLM_FALLBACK_MODELS: z.string().optional(),
+  LLM_RETRY_BASE_MS: z.coerce.number().default(1500),
   LLM_TIMEOUT_MS: z.coerce.number().default(180_000),
   EMBEDDINGS: z.enum(["local", "off"]).default("local"),
   ADZUNA_APP_ID: z.string().optional(),
